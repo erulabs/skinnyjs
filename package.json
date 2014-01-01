@@ -1,0 +1,25 @@
+{
+	"name": "eruslab",
+	"author": "Seandon Mooy",
+	"email": "seandon.mooy@gmail.com",
+	"version": "0.0.1",
+	"bin": "./labrat.js",
+	"dependencies": {
+		"node-watch": "latest",
+		"mongodb": "latest",
+		"express": "latest",
+		"socket.io": "latest",
+		"coffee-script": "latest",
+		"underscore": "latest",
+		"node-sass": "latest"
+	},
+	"devDependencies": {
+	},
+	"engines": {
+		"node": ">=0.10"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git@github.com:erulabs/skinnyjs.git"
+	}
+}
