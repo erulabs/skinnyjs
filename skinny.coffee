@@ -60,18 +60,26 @@ class Skinnyjs
         # Read and init
         fs.readdir skinny.cfg.layout.controllers, (err, controllers) ->
             controllers.forEach (controllerPath) ->
-                return unless controllerPath.indexOf '.js' > -1
-                name = controllerPath.replace '.js', ''
-                controller = require skinny.cfg.layout.controllers + '/' + controllerPath
-                skinny.controllers[name] = new skinny.Controller skinny, name, controller
+                return unless skinny.initController controllerPath
                 cb() if ++lazyLoad == 2
         fs.readdir skinny.cfg.layout.models, (err, models) ->
             models.forEach (modelPath) ->
-                return unless modelPath.indexOf '.js' > -1
-                name = modelPath.replace '.js', ''
-                model = require skinny.cfg.layout.models + '/' + modelPath
-                skinny.models[name] = new skinny.Model skinny, name, model
+                return unless skinny.initModel modelPath
                 cb() if ++lazyLoad == 2
+    # read and load Skinny Model
+    initController: (controllerPath) ->
+        return false unless controllerPath.substr(-3) == '.js'
+        name = controllerPath.replace '.js', ''
+        controller = require @cfg.layout.controllers + '/' + controllerPath
+        if @controllers[name]?
+            delete require.cache[require.resolve(@cfg.layout.controllers + '/' + controllerPath)]
+        @controllers[name] = new @Controller @, name, controller
+    # read and load Skinny Controller
+    initModel: (modelPath) ->
+        return false unless modelPath.substr(-3) == '.js'
+        name = modelPath.replace '.js', ''
+        model = require @cfg.layout.models + '/' + modelPath
+        @models[name] = new @Model @, name, model
     # SkinnyJS services wrapper
     server: () ->
         skinny = @
@@ -103,6 +111,11 @@ class Skinnyjs
         watch @cfg.layout.app, (file) ->
             compile = skinny.compileAsset file
             if !compile
+                if file.indexOf 'controllers' > 0
+                    reloadedControllerPath = file.replace skinny.cfg.layout.controllers + '/', ''
+                    console.log colors.cyan+'browser reloading:'+colors.reset, reloadedControllerPath
+                    skinny.initController reloadedControllerPath
+                # Reload browser
                 console.log colors.cyan+'browser reloading:'+colors.reset, file.replace(skinny.cfg.path, '')
                 skinny.io.sockets.emit '__reload', { delay: 0 }
     # Todo: A more robust asset compiler, with support for far more things.

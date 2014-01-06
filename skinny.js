@@ -101,13 +101,9 @@
       lazyLoad = 0;
       fs.readdir(skinny.cfg.layout.controllers, function(err, controllers) {
         return controllers.forEach(function(controllerPath) {
-          var controller, name;
-          if (!controllerPath.indexOf('.js' > -1)) {
+          if (!skinny.initController(controllerPath)) {
             return;
           }
-          name = controllerPath.replace('.js', '');
-          controller = require(skinny.cfg.layout.controllers + '/' + controllerPath);
-          skinny.controllers[name] = new skinny.Controller(skinny, name, controller);
           if (++lazyLoad === 2) {
             return cb();
           }
@@ -115,18 +111,37 @@
       });
       return fs.readdir(skinny.cfg.layout.models, function(err, models) {
         return models.forEach(function(modelPath) {
-          var model, name;
-          if (!modelPath.indexOf('.js' > -1)) {
+          if (!skinny.initModel(modelPath)) {
             return;
           }
-          name = modelPath.replace('.js', '');
-          model = require(skinny.cfg.layout.models + '/' + modelPath);
-          skinny.models[name] = new skinny.Model(skinny, name, model);
           if (++lazyLoad === 2) {
             return cb();
           }
         });
       });
+    };
+
+    Skinnyjs.prototype.initController = function(controllerPath) {
+      var controller, name;
+      if (controllerPath.substr(-3) !== '.js') {
+        return false;
+      }
+      name = controllerPath.replace('.js', '');
+      controller = require(this.cfg.layout.controllers + '/' + controllerPath);
+      if (this.controllers[name] != null) {
+        delete require.cache[require.resolve(this.cfg.layout.controllers + '/' + controllerPath)];
+      }
+      return this.controllers[name] = new this.Controller(this, name, controller);
+    };
+
+    Skinnyjs.prototype.initModel = function(modelPath) {
+      var model, name;
+      if (modelPath.substr(-3) !== '.js') {
+        return false;
+      }
+      name = modelPath.replace('.js', '');
+      model = require(this.cfg.layout.models + '/' + modelPath);
+      return this.models[name] = new this.Model(this, name, model);
     };
 
     Skinnyjs.prototype.server = function() {
@@ -164,9 +179,14 @@
       var skinny;
       skinny = this;
       return watch(this.cfg.layout.app, function(file) {
-        var compile;
+        var compile, reloadedControllerPath;
         compile = skinny.compileAsset(file);
         if (!compile) {
+          if (file.indexOf('controllers' > 0)) {
+            reloadedControllerPath = file.replace(skinny.cfg.layout.controllers + '/', '');
+            console.log(colors.cyan + 'browser reloading:' + colors.reset, reloadedControllerPath);
+            skinny.initController(reloadedControllerPath);
+          }
           console.log(colors.cyan + 'browser reloading:' + colors.reset, file.replace(skinny.cfg.path, ''));
           return skinny.io.sockets.emit('__reload', {
             delay: 0
