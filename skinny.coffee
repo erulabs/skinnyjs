@@ -111,11 +111,24 @@ class Skinnyjs
     # Watch the project directory and reload the browser when required. Also calls compileAsset() on things like coffeescript
     autoreload: () ->
         skinny = @
-        watch @cfg.layout.app, (file) ->
+        watch @cfg.path, (file) ->
             skinny.compileAsset file, () ->
-                unless file.indexOf 'controllers' == -1
-                    console.log 'rebuilding controller:', file.replace skinny.cfg.layout.controllers + '/', ''
+                if file.match '/controllers/'
+                    console.log colors.cyan+'rebuilding controller:'+colors.reset, file.replace skinny.cfg.layout.controllers + '/', ''
                     skinny.initController file.replace skinny.cfg.layout.controllers + '/', ''
+                if file.match '/cfg/'
+                    if file.match 'application.js'
+                        console.log colors.green+'rebuilding config:'+colors.reset, '/cfg/application.js'
+                        delete require.cache[require.resolve(file)]
+                        #overrides = require file
+                        #overrides(skinny)
+                        skinny.server()
+                    else if file.match 'routes.js'
+                        console.log colors.green+'rebuilding config:'+colors.reset, '/cfg/routes.js'
+                        delete require.cache[require.resolve(file)]
+                        skinny.routes = require file
+                    else
+                        console.log colors.red+'Non-standard /cfg/ file changed - not reloading. Server probably needs a restart!'+colors.reset
                 # Reload browser
                 console.log colors.cyan+'browser reloading:'+colors.reset, file.replace(skinny.cfg.path, '')
                 skinny.io.sockets.emit '__reload', { delay: 0 }

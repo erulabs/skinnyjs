@@ -180,11 +180,24 @@
     Skinnyjs.prototype.autoreload = function() {
       var skinny;
       skinny = this;
-      return watch(this.cfg.layout.app, function(file) {
+      return watch(this.cfg.path, function(file) {
         return skinny.compileAsset(file, function() {
-          if (!file.indexOf('controllers' === -1)) {
-            console.log('rebuilding controller:', file.replace(skinny.cfg.layout.controllers + '/', ''));
+          if (file.match('/controllers/')) {
+            console.log(colors.cyan + 'rebuilding controller:' + colors.reset, file.replace(skinny.cfg.layout.controllers + '/', ''));
             skinny.initController(file.replace(skinny.cfg.layout.controllers + '/', ''));
+          }
+          if (file.match('/cfg/')) {
+            if (file.match('application.js')) {
+              console.log(colors.green + 'rebuilding config:' + colors.reset, '/cfg/application.js');
+              delete require.cache[require.resolve(file)];
+              skinny.server();
+            } else if (file.match('routes.js')) {
+              console.log(colors.green + 'rebuilding config:' + colors.reset, '/cfg/routes.js');
+              delete require.cache[require.resolve(file)];
+              skinny.routes = require(file);
+            } else {
+              console.log(colors.red + 'Non-standard /cfg/ file changed - not reloading. Server probably needs a restart!' + colors.reset);
+            }
           }
           console.log(colors.cyan + 'browser reloading:' + colors.reset, file.replace(skinny.cfg.path, ''));
           return skinny.io.sockets.emit('__reload', {
