@@ -73,10 +73,6 @@
       this.routes = {};
     }
 
-    Skinnyjs.prototype.Controller = function(skinny, name, controller) {
-      return controller(skinny);
-    };
-
     Skinnyjs.prototype.Model = function(skinny, name, model) {
       var collection, instance;
       instance = model(skinny);
@@ -131,7 +127,7 @@
       if (this.controllers[name] != null) {
         delete require.cache[require.resolve(this.cfg.layout.controllers + '/' + controllerPath)];
       }
-      return this.controllers[name] = new this.Controller(this, name, controller);
+      return this.controllers[name] = controller(this);
     };
 
     Skinnyjs.prototype.initModel = function(modelPath) {
@@ -155,8 +151,7 @@
       this.web.use(this.express.json());
       this.httpd = http.createServer(this.web);
       this.routes = require(this.cfg.layout.cfg + '/routes.js');
-      overrides = require(this.cfg.layout.cfg + '/application.js');
-      overrides(this);
+      overrides = require(this.cfg.layout.cfg + '/application.js')(this);
       this.web.set('port', this.cfg.port);
       if (this.cfg.reload) {
         this.autoreload();
@@ -165,7 +160,6 @@
       this.io = this.socketio.listen(this.httpd, {
         log: false
       });
-      this.io.sockets.on('connections', function(socket) {});
       return mongo.connect('mongodb://' + this.cfg.db + '/' + this.cfg.project, function(err, db) {
         if (err) {
           return console.log('MongoDB error:', err);
@@ -181,26 +175,16 @@
       var skinny;
       skinny = this;
       return watch(this.cfg.path, function(file) {
-        if (file.match('/.git/')) {
+        if (file.match('/.git/' || file.match('.swp'))) {
           return;
         }
         return skinny.compileAsset(file, function() {
           if (file.match('/controllers/')) {
-            console.log(colors.cyan + 'rebuilding controller:' + colors.reset, file.replace(skinny.cfg.layout.controllers + '/', ''));
             skinny.initController(file.replace(skinny.cfg.layout.controllers + '/', ''));
           }
           if (file.match('/cfg/')) {
-            if (file.match('application.js')) {
-              console.log(colors.green + 'rebuilding config:' + colors.reset, '/cfg/application.js');
-              delete require.cache[require.resolve(file)];
-              skinny.server();
-            } else if (file.match('routes.js')) {
-              console.log(colors.green + 'rebuilding config:' + colors.reset, '/cfg/routes.js');
-              delete require.cache[require.resolve(file)];
-              skinny.routes = require(file);
-            } else {
-              console.log(colors.red + 'Non-standard /cfg/ file changed - not reloading. Server probably needs a restart!' + colors.reset);
-            }
+            delete require.cache[require.resolve(file)];
+            skinny.server();
           }
           console.log(colors.cyan + 'browser reloading:' + colors.reset, file.replace(skinny.cfg.path, ''));
           return skinny.io.sockets.emit('__reload', {
@@ -257,39 +241,35 @@
       skinny = this;
       return _.each(skinny.routes, function(value, key) {
         var action, controller, method, route;
+        method = 'get';
         if (typeof value === 'string') {
           controller = value.split('#')[0];
           action = value.split('#')[1];
-          method = 'GET';
         } else if (typeof value === 'object') {
           controller = value.controller;
           action = value.action;
           if (value.method != null) {
             method = value.method;
-          } else {
-            method = 'GET';
           }
         }
         route = true;
         if ((skinny.controllers[controller] == null) || (skinny.controllers[controller][action] == null)) {
           route = false;
         }
-        if (skinny.controllers[controller] != null) {
-          if (skinny.controllers[controller]['*'] != null) {
-            skinny.controllers[controller]['*']();
-          }
+        if ((skinny.controllers[controller] != null) && (skinny.controllers[controller]['*'] != null)) {
+          skinny.controllers[controller]['*']();
         }
-        return skinny.web[method.toLowerCase()](key, function(req, res) {
-          var view;
+        return skinny.web[method](key, function(req, res) {
+          var ctrlTactic, view;
           view = skinny.cfg.layout.views + '/' + controller + '/' + action + '.html';
+          if (route) {
+            ctrlTactic = skinny.controllers[controller][action](req, res);
+          }
           return fs.exists(view, function(exists) {
-            var ctrlTactic;
             if (exists) {
               res.view = view;
             }
-            if (route) {
-              ctrlTactic = skinny.controllers[controller][action](req, res);
-            } else {
+            if (!route) {
               console.log('No route for', controller + '#' + action, ' Controllers:', skinny.controllers);
             }
             if (!res.headersSent) {
@@ -300,8 +280,11 @@
                   return res.send('404 - no view');
                 }
               } else {
+                if (!ctrlTactic) {
+                  return;
+                }
                 if (typeof ctrlTactic === "object") {
-                  ctrlTactic = JSON.parse(ctrlTactic);
+                  ctrlTactic = JSON.stringify(ctrlTactic);
                 }
                 return res.send(ctrlTactic);
               }
@@ -312,10 +295,6 @@
     };
 
     Skinnyjs.prototype.install = function() {
-      return this.installDirectoryLayout();
-    };
-
-    Skinnyjs.prototype.installDirectoryLayout = function() {
       var component, fsCalls, path, skinny, _ref, _results;
       skinny = this;
       fsCalls = [];
@@ -346,10 +325,7 @@
       skinny = this;
       templates = ['/cfg/routes.js', '/cfg/application.js', '/app/views/home/home.html', '/app/controllers/home.js', '/app/models/thing.js', '/app/assets/socket.io.min.js', '/app/assets/reload.js'];
       return templates.forEach(function(template) {
-        var from, to;
-        from = __dirname + template;
-        to = skinny.cfg.path + template;
-        return fs.createReadStream(from).pipe(fs.createWriteStream(to));
+        return fs.createReadStream(__dirname + template).pipe(fs.createWriteStream(skinny.cfg.path + template));
       });
     };
 

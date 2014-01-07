@@ -144,7 +144,8 @@ class Skinnyjs
                             else
                                 res.send '404 - no view'
                         else
-                            ctrlTactic = JSON.parse ctrlTactic if typeof ctrlTactic == "object"
+                            return if !ctrlTactic
+                            ctrlTactic = JSON.stringify ctrlTactic if typeof ctrlTactic == "object"
                             res.send ctrlTactic
     install: () -> # Build a working SkinnyJS project
         skinny = @
