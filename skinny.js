@@ -145,7 +145,7 @@
     };
 
     Skinnyjs.prototype.server = function() {
-      var skinny;
+      var overrides, skinny;
       skinny = this;
       this.express = require('express');
       this.socketio = require('socket.io');
@@ -155,6 +155,8 @@
       this.web.use(this.express.json());
       this.httpd = http.createServer(this.web);
       this.routes = require(this.cfg.layout.cfg + '/routes.js');
+      overrides = require(this.cfg.layout.cfg + '/application.js');
+      overrides(this);
       this.web.set('port', this.cfg.port);
       if (this.cfg.reload) {
         this.autoreload();
@@ -179,68 +181,59 @@
       var skinny;
       skinny = this;
       return watch(this.cfg.layout.app, function(file) {
-        var compile, reloadedControllerPath;
-        compile = skinny.compileAsset(file);
-        if (!compile) {
-          if (file.indexOf('controllers' > 0)) {
-            reloadedControllerPath = file.replace(skinny.cfg.layout.controllers + '/', '');
-            console.log(colors.cyan + 'browser reloading:' + colors.reset, reloadedControllerPath);
-            skinny.initController(reloadedControllerPath);
+        return skinny.compileAsset(file, function() {
+          if (!file.indexOf('controllers' === -1)) {
+            console.log('rebuilding controller:', file.replace(skinny.cfg.layout.controllers + '/', ''));
+            skinny.initController(file.replace(skinny.cfg.layout.controllers + '/', ''));
           }
           console.log(colors.cyan + 'browser reloading:' + colors.reset, file.replace(skinny.cfg.path, ''));
           return skinny.io.sockets.emit('__reload', {
             delay: 0
           });
-        }
+        });
       });
     };
 
-    Skinnyjs.prototype.compileAsset = function(file) {
+    Skinnyjs.prototype.compileAsset = function(file, cb) {
       var skinny;
       skinny = this;
-      return fs.exists(file, function(exists) {
-        if (!exists) {
-          return;
-        }
-        if (file.substr(-7) === '.coffee') {
-          return fs.readFile(file, 'utf8', function(err, rawCode) {
-            var cs, error;
-            if (err) {
-              console.log(colors.red + 'autoreload readfile error:' + colors.reset, err);
-            }
-            console.log(colors.cyan + 'autocompiling coffeescript:' + colors.reset, file.replace(skinny.cfg.path, ''));
-            try {
-              return cs = coffee.compile(rawCode);
-            } catch (_error) {
-              error = _error;
-              return console.log('coffee compile error, file:', file, 'error:', error);
-            } finally {
-              fs.writeFile(file.replace('.coffee', '.js'), cs, function(err) {
-                if (err) {
-                  return console.log(colors.red + 'autocompile write error! file' + colors.reset, file.replace('.coffee', '.js'), 'error:', err);
-                }
-              });
-            }
-          });
-        } else if (file.substr(-5) === '.scss') {
-          return sass.render({
-            file: file,
-            success: function(css) {
-              console.log('writing css', css);
-              return fs.writeFile(file.replace('.scss', '.css'), css, function(err) {
-                if (err) {
-                  return console.log(colors.red + 'autocompile write error! file' + colors.reset, file.replace('.scss', '.css'), 'error:', err);
-                }
-              });
-            },
-            error: function(error) {
-              return console.log('SCSS Compile error:', error);
-            }
-          });
-        } else {
-          return false;
-        }
-      });
+      if (file.substr(-7) === '.coffee') {
+        return fs.readFile(file, 'utf8', function(err, rawCode) {
+          var cs, error;
+          if (err) {
+            console.log(colors.red + 'autoreload readfile error:' + colors.reset, err);
+          }
+          console.log(colors.cyan + 'autocompiling coffeescript:' + colors.reset, file.replace(skinny.cfg.path, ''));
+          try {
+            return cs = coffee.compile(rawCode);
+          } catch (_error) {
+            error = _error;
+            return console.log('coffee compile error, file:', file, 'error:', error);
+          } finally {
+            fs.writeFile(file.replace('.coffee', '.js'), cs, function(err) {
+              if (err) {
+                return console.log(colors.red + 'autocompile write error! file' + colors.reset, file.replace('.coffee', '.js'), 'error:', err);
+              }
+            });
+          }
+        });
+      } else if (file.substr(-5) === '.scss') {
+        return sass.render({
+          file: file,
+          success: function(css) {
+            return fs.writeFile(file.replace('.scss', '.css'), css, function(err) {
+              if (err) {
+                return console.log(colors.red + 'autocompile write error! file' + colors.reset, file.replace('.scss', '.css'), 'error:', err);
+              }
+            });
+          },
+          error: function(error) {
+            return console.log('SCSS Compile error:', error);
+          }
+        });
+      } else {
+        return cb();
+      }
     };
 
     Skinnyjs.prototype.parseRoutes = function() {
@@ -277,23 +270,25 @@
             var ctrlTactic;
             if (exists) {
               res.view = view;
-              if (route) {
-                ctrlTactic = skinny.controllers[controller][action](req, res);
-              } else {
-                console.log('No route for', controller + '#' + action, ' Controllers:', skinny.controllers);
-              }
-              if (!res.headersSent) {
-                if (ctrlTactic == null) {
+            }
+            if (route) {
+              ctrlTactic = skinny.controllers[controller][action](req, res);
+            } else {
+              console.log('No route for', controller + '#' + action, ' Controllers:', skinny.controllers);
+            }
+            if (!res.headersSent) {
+              if (ctrlTactic == null) {
+                if (exists) {
                   return res.sendfile(res.view);
                 } else {
-                  if (typeof ctrlTactic === "object") {
-                    ctrlTactic = JSON.parse(ctrlTactic);
-                  }
-                  return res.send(ctrlTactic);
+                  return res.send('404 - no view');
                 }
+              } else {
+                if (typeof ctrlTactic === "object") {
+                  ctrlTactic = JSON.parse(ctrlTactic);
+                }
+                return res.send(ctrlTactic);
               }
-            } else {
-              return res.send('404 - no view');
             }
           });
         });
@@ -333,7 +328,7 @@
     Skinnyjs.prototype.installTemplates = function() {
       var skinny, templates;
       skinny = this;
-      templates = ['/cfg/routes.js', '/app/views/home/home.html', '/app/controllers/home.js', '/app/models/thing.js', '/app/assets/socket.io.min.js', '/app/assets/reload.js'];
+      templates = ['/cfg/routes.js', '/cfg/application.js', '/app/views/home/home.html', '/app/controllers/home.js', '/app/models/thing.js', '/app/assets/socket.io.min.js', '/app/assets/reload.js'];
       return templates.forEach(function(template) {
         var from, to;
         from = __dirname + template;

@@ -90,8 +90,11 @@ class Skinnyjs
         @web.use '/views', @express.static @cfg.layout.views
         @web.use '/assets', @express.static @cfg.layout.assets
         @web.use @express.json()
+
         @httpd = http.createServer @web
         @routes = require @cfg.layout.cfg + '/routes.js'
+        overrides = require @cfg.layout.cfg + '/application.js'
+        overrides(@)
         
         @web.set 'port', @cfg.port
         @autoreload() if @cfg.reload
@@ -109,47 +112,44 @@ class Skinnyjs
     autoreload: () ->
         skinny = @
         watch @cfg.layout.app, (file) ->
-            compile = skinny.compileAsset file
-            if !compile
-                if file.indexOf 'controllers' > 0
-                    reloadedControllerPath = file.replace skinny.cfg.layout.controllers + '/', ''
-                    console.log colors.cyan+'browser reloading:'+colors.reset, reloadedControllerPath
-                    skinny.initController reloadedControllerPath
+            skinny.compileAsset file, () ->
+                unless file.indexOf 'controllers' == -1
+                    console.log 'rebuilding controller:', file.replace skinny.cfg.layout.controllers + '/', ''
+                    skinny.initController file.replace skinny.cfg.layout.controllers + '/', ''
                 # Reload browser
                 console.log colors.cyan+'browser reloading:'+colors.reset, file.replace(skinny.cfg.path, '')
                 skinny.io.sockets.emit '__reload', { delay: 0 }
     # Todo: A more robust asset compiler, with support for far more things.
     # this should be called primary from autoreload, but also on a static call of "compile all assets" from the script runner
     # it should handle 
-    compileAsset: (file) ->
+    compileAsset: (file, cb) ->
         skinny = @
-        fs.exists file, (exists) ->
-            return unless exists
-            # This ought to check against an array of compilable assets
-            # and use node path's extention checker
-            if file.substr(-7) == '.coffee'
-                fs.readFile file, 'utf8', (err, rawCode) ->
-                    console.log colors.red+'autoreload readfile error:'+colors.reset, err if err
-                    console.log colors.cyan+'autocompiling coffeescript:'+colors.reset, file.replace(skinny.cfg.path, '')
-                    try
-                        cs = coffee.compile rawCode
-                    catch error
-                        console.log 'coffee compile error, file:', file, 'error:', error
-                    finally
-                        fs.writeFile file.replace('.coffee', '.js'), cs, (err) ->
-                            console.log colors.red+'autocompile write error! file'+colors.reset, file.replace('.coffee', '.js'), 'error:', err if err
-            else if file.substr(-5) == '.scss'
-                sass.render {
-                    file: file
-                    success: (css) ->
-                        console.log 'writing css', css
-                        fs.writeFile file.replace('.scss', '.css'), css, (err) ->
-                            console.log colors.red+'autocompile write error! file'+colors.reset, file.replace('.scss', '.css'), 'error:', err if err
-                    error: (error) ->
-                        console.log('SCSS Compile error:', error);
-                }
-            else
-                return false
+        #fs.exists file, (exists) ->
+        #    return unless exists
+        # This ought to check against an array of compilable assets
+        # and use node path's extention checker
+        if file.substr(-7) == '.coffee'
+            fs.readFile file, 'utf8', (err, rawCode) ->
+                console.log colors.red+'autoreload readfile error:'+colors.reset, err if err
+                console.log colors.cyan+'autocompiling coffeescript:'+colors.reset, file.replace(skinny.cfg.path, '')
+                try
+                    cs = coffee.compile rawCode
+                catch error
+                    console.log 'coffee compile error, file:', file, 'error:', error
+                finally
+                    fs.writeFile file.replace('.coffee', '.js'), cs, (err) ->
+                        console.log colors.red+'autocompile write error! file'+colors.reset, file.replace('.coffee', '.js'), 'error:', err if err
+        else if file.substr(-5) == '.scss'
+            sass.render {
+                file: file
+                success: (css) ->
+                    fs.writeFile file.replace('.scss', '.css'), css, (err) ->
+                        console.log colors.red+'autocompile write error! file'+colors.reset, file.replace('.scss', '.css'), 'error:', err if err
+                error: (error) ->
+                    console.log('SCSS Compile error:', error);
+            }
+        else
+            cb()
 
     # Parse the already loaded routes.js and create required expressjs routes
     parseRoutes: () ->
@@ -177,18 +177,20 @@ class Skinnyjs
                 fs.exists view, (exists) ->
                     if exists
                         res.view = view
-                        if route
-                            ctrlTactic = skinny.controllers[controller][action] req, res
-                        else
-                            console.log 'No route for', controller + '#' + action, ' Controllers:', skinny.controllers
-                        unless res.headersSent
-                            if !ctrlTactic?
+                    if route
+                        ctrlTactic = skinny.controllers[controller][action](req, res)
+                    else
+                        console.log 'No route for', controller + '#' + action, ' Controllers:', skinny.controllers
+                    unless res.headersSent
+                        if !ctrlTactic?
+                            if exists
                                 res.sendfile res.view
                             else
-                                ctrlTactic = JSON.parse ctrlTactic if typeof ctrlTactic == "object"
-                                res.send ctrlTactic
-                    else
-                        res.send '404 - no view'
+                                res.send '404 - no view'
+                        else
+                            ctrlTactic = JSON.parse ctrlTactic if typeof ctrlTactic == "object"
+                            res.send ctrlTactic
+
 
     # Build a working SkinnyJS project
     install: () ->
@@ -211,6 +213,7 @@ class Skinnyjs
         skinny = @
         templates = [
             '/cfg/routes.js'
+            '/cfg/application.js'
             '/app/views/home/home.html'
             '/app/controllers/home.js'
             '/app/models/thing.js'
