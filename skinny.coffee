@@ -1,27 +1,17 @@
 # Skinny.js by Seandon 'erulabs' Mooy -> admin@erulabs.com -> github.com/erulabs
-#     _______  __  ___  __   __   __   __   __  ____    ____        __       ______
-#    /       ||  |/  / |  | |  \ |  | |  \ |  | \   \  /   /       |  |     /      |
-#   |   (----`|  '  /  |  | |   \|  | |   \|  |  \   \/   /        |  |    |   (---`
-#    \   \    |    <   |  | |    `  | |    `  |   \_    _/   .--.  |  |     \   \    
-#|----)   |   |     \  |  | |  |\   | |  |\   |     |  |  __ |  `--'  | .----)   |   
-#|_______/    |__|\__\ |__| |__| \__| |__| \__|     |__| (__) \______/  |_______/    
 # A micro ORM-less Javascript MVC Framework that makes your MVC look fat
-"use strict";
-# SkinnyJS requirements:
+"use strict"; # SkinnyJS requirements:
 fs      = require 'fs'
 http    = require 'http'
 mongo   = require('mongodb').MongoClient
 _       = require 'underscore'
-# Development only requirements:
 watch   = require 'node-watch'
 coffee  = require 'coffee-script'
 sass    = require 'node-sass'
-# Console colors for logging
-colors  = { red: "\u001b[31m", blue: "\u001b[34m", green: "\u001b[32m", cyan: "\u001b[36m", reset: "\u001b[0m" }
+colors  = { red: "\u001b[31m", blue: "\u001b[34m", green: "\u001b[32m", cyan: "\u001b[36m", reset: "\u001b[0m" } # Console colors for logging
 class Skinnyjs
     constructor: (@cfg) ->
-        # Configuration defaults
-        @cfg = {} if !@cfg?
+        @cfg = {} if !@cfg? # Configuration defaults
         @cfg.port               = 9000 unless @cfg.port?
         @cfg.reload             = true unless @cfg.reload?
         @cfg.path               = process.cwd() unless @cfg.path?
@@ -34,16 +24,11 @@ class Skinnyjs
         @cfg.layout.views       = @cfg.layout.app + '/views' unless @cfg.layout.views?
         @cfg.layout.controllers = @cfg.layout.app + '/controllers' unless @cfg.layout.controllers?
         @cfg.layout.assets      = @cfg.layout.app + '/assets' unless @cfg.layout.assets?
-        # Initialize Skinny components
-        @db             = false
+        @db             = false # Initialize Skinny components
         @controllers    = {}
         @models         = {}
         @routes         = {}
-    # Skinny Controller
-    Controller: (skinny, name, controller) ->
-        controller skinny
-    # Skinny Model
-    Model: (skinny, name, model) ->
+    Model: (skinny, name, model) -> # Skinny Model -> Take a js object and add some mongodb functionaltiy -> almost like a real framework :P
         instance = model skinny
         collection = skinny.db.collection(name)
         instance.prototype.find = (opts) ->
@@ -53,8 +38,7 @@ class Skinnyjs
                 console.log 'MongoDB error on ' + name + '.all():', err if err
                 cb(instances)
         return instance
-    # Initialize a SkinnyJS application
-    init: (cb) ->
+    init: (cb) -> # Initialize a SkinnyJS application
         skinny = @
         lazyLoad = 0
         # Read and init
@@ -66,22 +50,19 @@ class Skinnyjs
             models.forEach (modelPath) ->
                 return unless skinny.initModel modelPath
                 cb() if ++lazyLoad == 2
-    # read and load Skinny Model
-    initController: (controllerPath) ->
+    initController: (controllerPath) -> # read and load Skinny Model
         return false unless controllerPath.substr(-3) == '.js'
         name = controllerPath.replace '.js', ''
         controller = require @cfg.layout.controllers + '/' + controllerPath
         if @controllers[name]?
             delete require.cache[require.resolve(@cfg.layout.controllers + '/' + controllerPath)]
-        @controllers[name] = new @Controller @, name, controller
-    # read and load Skinny Controller
-    initModel: (modelPath) ->
+        @controllers[name] = controller @
+    initModel: (modelPath) -> # read and load Skinny Controller
         return false unless modelPath.substr(-3) == '.js'
         name = modelPath.replace '.js', ''
         model = require @cfg.layout.models + '/' + modelPath
         @models[name] = new @Model @, name, model
-    # SkinnyJS services wrapper
-    server: () ->
+    server: () -> # SkinnyJS services wrapper
         skinny = @
         # Initialize express
         @express = require 'express'
@@ -90,58 +71,31 @@ class Skinnyjs
         @web.use '/views', @express.static @cfg.layout.views
         @web.use '/assets', @express.static @cfg.layout.assets
         @web.use @express.json()
-
         @httpd = http.createServer @web
         @routes = require @cfg.layout.cfg + '/routes.js'
-        overrides = require @cfg.layout.cfg + '/application.js'
-        overrides(@)
-        
+        overrides = require(@cfg.layout.cfg + '/application.js')(@)
         @web.set 'port', @cfg.port
         @autoreload() if @cfg.reload
         @httpd.listen @cfg.port
         @io = @socketio.listen @httpd, { log: no }
-
-        @io.sockets.on 'connections', (socket) ->
-            # Do something with sockets
+        #@io.sockets.on 'connections', (socket) -> # Do something with sockets
         mongo.connect 'mongodb://' + @cfg.db + '/' + @cfg.project, (err, db) ->
             return console.log 'MongoDB error:', err if err
             skinny.db = db
-            skinny.init () ->
-                skinny.parseRoutes()
-    # Watch the project directory and reload the browser when required. Also calls compileAsset() on things like coffeescript
-    autoreload: () ->
+            skinny.init () -> skinny.parseRoutes()
+    autoreload: () -> # Watch the project directory and reload the browser when required. Also calls compileAsset() on things like coffeescript
         skinny = @
         watch @cfg.path, (file) ->
-            return if file.match '/.git/'
+            return if file.match '/.git/' or file.match '.swp'
             skinny.compileAsset file, () ->
-                if file.match '/controllers/'
-                    console.log colors.cyan+'rebuilding controller:'+colors.reset, file.replace skinny.cfg.layout.controllers + '/', ''
-                    skinny.initController file.replace skinny.cfg.layout.controllers + '/', ''
-                if file.match '/cfg/'
-                    if file.match 'application.js'
-                        console.log colors.green+'rebuilding config:'+colors.reset, '/cfg/application.js'
-                        delete require.cache[require.resolve(file)]
-                        #overrides = require file
-                        #overrides(skinny)
-                        skinny.server()
-                    else if file.match 'routes.js'
-                        console.log colors.green+'rebuilding config:'+colors.reset, '/cfg/routes.js'
-                        delete require.cache[require.resolve(file)]
-                        skinny.routes = require file
-                    else
-                        console.log colors.red+'Non-standard /cfg/ file changed - not reloading. Server probably needs a restart!'+colors.reset
-                # Reload browser
+                skinny.initController file.replace skinny.cfg.layout.controllers + '/', '' if file.match '/controllers/'
+                if file.match '/cfg/' # Special conditions for Skinny configuration files - delete require.cache and reload express (or rather, skinny.server())
+                    delete require.cache[require.resolve(file)]
+                    skinny.server() # Probably not the best idea to always reload if anything is changed here, but we'll leave it transparent.
                 console.log colors.cyan+'browser reloading:'+colors.reset, file.replace(skinny.cfg.path, '')
-                skinny.io.sockets.emit '__reload', { delay: 0 }
-    # Todo: A more robust asset compiler, with support for far more things.
-    # this should be called primary from autoreload, but also on a static call of "compile all assets" from the script runner
-    # it should handle 
-    compileAsset: (file, cb) ->
+                skinny.io.sockets.emit '__reload', { delay: 0 } # Configurable reload delay
+    compileAsset: (file, cb) -> # Compiles common assets... We could use something like Gulp or Grunt or etc etc etc, but this dead simple - compile coffeescript and scss
         skinny = @
-        #fs.exists file, (exists) ->
-        #    return unless exists
-        # This ought to check against an array of compilable assets
-        # and use node path's extention checker
         if file.substr(-7) == '.coffee'
             fs.readFile file, 'utf8', (err, rawCode) ->
                 console.log colors.red+'autoreload readfile error:'+colors.reset, err if err
@@ -162,39 +116,27 @@ class Skinnyjs
                 error: (error) ->
                     console.log('SCSS Compile error:', error);
             }
-        else
-            cb()
-
-    # Parse the already loaded routes.js and create required expressjs routes
-    parseRoutes: () ->
+        else cb()
+    parseRoutes: () -> # Parse the already loaded routes.js and create required expressjs routes
         skinny = @
         _.each skinny.routes, (value, key) ->
+            method = 'get'
             if typeof value == 'string'
                 controller = value.split('#')[0]
                 action = value.split('#')[1]
-                method = 'GET'
             else if typeof value == 'object'
                 controller = value.controller
                 action = value.action
-                if value.method?
-                    method = value.method
-                else
-                    method = 'GET'
-            # If no controller or action is defined, just check for the view
-            route = true
+                method = value.method if value.method?
+            route = true # If no controller or action is defined, just check for the view
             route = false if !skinny.controllers[controller]? or !skinny.controllers[controller][action]?
-            if skinny.controllers[controller]?
-                skinny.controllers[controller]['*']() if skinny.controllers[controller]['*']?
-            skinny.web[method.toLowerCase()] key, (req, res) ->
+            skinny.controllers[controller]['*']() if skinny.controllers[controller]? and skinny.controllers[controller]['*']? # Run the catchall function if its defined
+            skinny.web[method] key, (req, res) -> # express.js route -> skinny.web is express.app -> we're adding .get, .post... app[method](), etc.
                 view = skinny.cfg.layout.views + '/' + controller + '/' + action + '.html'
-                #console.log 'rendering', view.replace(skinny.cfg.path, '')
+                ctrlTactic = skinny.controllers[controller][action](req, res) if route
                 fs.exists view, (exists) ->
-                    if exists
-                        res.view = view
-                    if route
-                        ctrlTactic = skinny.controllers[controller][action](req, res)
-                    else
-                        console.log 'No route for', controller + '#' + action, ' Controllers:', skinny.controllers
+                    res.view = view if exists
+                    console.log 'No route for', controller + '#' + action, ' Controllers:', skinny.controllers if !route
                     unless res.headersSent
                         if !ctrlTactic?
                             if exists
@@ -204,13 +146,7 @@ class Skinnyjs
                         else
                             ctrlTactic = JSON.parse ctrlTactic if typeof ctrlTactic == "object"
                             res.send ctrlTactic
-
-
-    # Build a working SkinnyJS project
-    install: () ->
-        @installDirectoryLayout()
-    # Build the directory structure of a SkinnyJS project
-    installDirectoryLayout: () ->
+    install: () -> # Build a working SkinnyJS project
         skinny = @
         fsCalls = []
         for component, path of skinny.cfg.layout
@@ -222,21 +158,8 @@ class Skinnyjs
                     fs.mkdir skinny.cfg.path + '/app/views/home', (err) ->
                         return console.log err if err
                         skinny.installTemplates()
-    # Install templates for a default/preview SkinnyJS project
-    installTemplates: () ->
+    installTemplates: () -> # Install templates for a default/preview SkinnyJS project
         skinny = @
-        templates = [
-            '/cfg/routes.js'
-            '/cfg/application.js'
-            '/app/views/home/home.html'
-            '/app/controllers/home.js'
-            '/app/models/thing.js'
-            '/app/assets/socket.io.min.js'
-            '/app/assets/reload.js' ]
-        templates.forEach (template) ->
-            from = __dirname + template
-            to = skinny.cfg.path + template
-            fs.createReadStream(from).pipe fs.createWriteStream to
-
-
+        templates = [ '/cfg/routes.js', '/cfg/application.js', '/app/views/home/home.html', '/app/controllers/home.js', '/app/models/thing.js', '/app/assets/socket.io.min.js', '/app/assets/reload.js' ]
+        templates.forEach (template) -> fs.createReadStream(__dirname + template).pipe fs.createWriteStream skinny.cfg.path + template
 module.exports = Skinnyjs

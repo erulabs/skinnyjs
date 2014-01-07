@@ -1,7 +1,7 @@
 module.exports = {
 	'/': {
-		// GET by default
-		// method: 'GET',
+		// get by default
+		// method: 'get',
 		controller: 'home',
 		action: 'home'
 	},
