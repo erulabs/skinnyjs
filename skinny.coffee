@@ -112,6 +112,7 @@ class Skinnyjs
     autoreload: () ->
         skinny = @
         watch @cfg.path, (file) ->
+            return if file.match '/.git/'
             skinny.compileAsset file, () ->
                 if file.match '/controllers/'
                     console.log colors.cyan+'rebuilding controller:'+colors.reset, file.replace skinny.cfg.layout.controllers + '/', ''

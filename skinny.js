@@ -181,6 +181,9 @@
       var skinny;
       skinny = this;
       return watch(this.cfg.path, function(file) {
+        if (file.match('/.git/')) {
+          return;
+        }
         return skinny.compileAsset(file, function() {
           if (file.match('/controllers/')) {
             console.log(colors.cyan + 'rebuilding controller:' + colors.reset, file.replace(skinny.cfg.layout.controllers + '/', ''));
