@@ -196,36 +196,31 @@
           _this.controllers[controller]['*']();
         }
         return _this.web[method](key, function(req, res) {
-          var ctrlTactic, view;
-          view = _this.cfg.layout.views + '/' + controller + '/' + action + '.html';
+          var ctrlTactic;
+          res.view = _this.cfg.layout.views + '/' + controller + '/' + action + '.html';
           if (route) {
             ctrlTactic = _this.controllers[controller][action](req, res);
           }
-          return fs.exists(view, function(exists) {
-            if (exists) {
-              res.view = view;
-            }
+          return fs.exists(res.view, function(exists) {
             if (!route) {
               console.log('No route for', controller + '#' + action, ' Controllers:', _this.controllers);
             }
-            if (!res.headersSent) {
-              if (ctrlTactic == null) {
-                if (exists) {
-                  res.sendfile(res.view);
-                }
-                if (!exists) {
-                  return res.send('404 - no view');
-                }
-              } else {
-                if (!ctrlTactic) {
-                  return;
-                }
-                if (typeof ctrlTactic === "object") {
-                  ctrlTactic = JSON.stringify(ctrlTactic);
-                }
-                return res.send(ctrlTactic);
-              }
+            if (res.headersSent) {
+              return;
             }
+            if (exists && (ctrlTactic == null)) {
+              return res.sendfile(res.view);
+            }
+            if (!exists && (ctrlTactic == null)) {
+              return res.send('404 - no view');
+            }
+            if (!ctrlTactic) {
+              return;
+            }
+            if (typeof ctrlTactic === "object") {
+              ctrlTactic = JSON.stringify(ctrlTactic);
+            }
+            return res.send(ctrlTactic);
           });
         });
       });

@@ -89,19 +89,16 @@ module.exports = class Skinnyjs
             route = false if !@controllers[controller]? or !@controllers[controller][action]?
             @controllers[controller]['*']() if @controllers[controller]? and @controllers[controller]['*']? # Run the catchall function if its defined
             @web[method] key, (req, res) => # express.js route -> @web is express.app -> we're adding .get, .post... app[method](), etc.
-                view = @cfg.layout.views + '/' + controller + '/' + action + '.html'
+                res.view = @cfg.layout.views + '/' + controller + '/' + action + '.html'
                 ctrlTactic = @controllers[controller][action](req, res) if route
-                fs.exists view, (exists) =>
-                    res.view = view if exists
+                fs.exists res.view, (exists) =>
                     console.log 'No route for', controller + '#' + action, ' Controllers:', @controllers if !route
-                    unless res.headersSent
-                        if !ctrlTactic?
-                            res.sendfile res.view if exists
-                            res.send '404 - no view' if !exists
-                        else
-                            return if !ctrlTactic
-                            ctrlTactic = JSON.stringify ctrlTactic if typeof ctrlTactic == "object"
-                            res.send ctrlTactic
+                    return if res.headersSent # If the controller already sent headers to the browser, do nothing
+                    return res.sendfile res.view if exists and !ctrlTactic? # Send a file if the controller didn't intercept, and the view exists
+                    return res.send '404 - no view' if !exists and !ctrlTactic? # Send a 404 if the controller didn't intercept, and the view doesn't exist
+                    return if !ctrlTactic # If the controller returned "false", do nothing (allows the controller full control over the request)
+                    ctrlTactic = JSON.stringify ctrlTactic if typeof ctrlTactic == "object" # if the controller returned an object, JSONify it and render the JSON
+                    res.send ctrlTactic # Send w/e we have from the controller
     autoreload: () -> # Watch the project directory and reload the browser when required. Also calls compileAsset() on things like coffeescript
         watch @cfg.path, (file) =>
             return true if path.extname(file) == '.tmp' or path.extname(file) == '.swp' or file.match '/.git/'
