@@ -304,7 +304,7 @@
               if (err) {
                 return console.log(err);
               }
-              return this.installTemplates();
+              return _this.installTemplates();
             });
           }
         }));
@@ -315,7 +315,7 @@
     Skinnyjs.prototype.installTemplates = function() {
       var templates,
         _this = this;
-      templates = ['/cfg/routes.js', '/cfg/application.js', '/app/views/home/home.html', '/app/controllers/home.js', '/app/models/thing.js', '/app/assets/socket.io.min.js', '/app/assets/reload.js'];
+      templates = ['/cfg/routes.js', '/cfg/application.js', '/app/server.js', '/app/views/home/home.html', '/app/controllers/home.js', '/app/models/thing.js', '/app/assets/socket.io.min.js', '/app/assets/reload.js'];
       return templates.forEach(function(template) {
         return fs.createReadStream(__dirname + template).pipe(fs.createWriteStream(_this.cfg.path + template));
       });

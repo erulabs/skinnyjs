@@ -132,9 +132,9 @@ module.exports = class Skinnyjs
             fs.mkdir path, (err) =>
                 return console.log err if err
                 if --fsCalls == 0  # Development / intro / temporary things - this will be removed and moved into the task runner's init()
-                    fs.mkdir @cfg.path + '/app/views/home', (err) ->
+                    fs.mkdir @cfg.path + '/app/views/home', (err) =>
                         return console.log err if err
                         @installTemplates()
     installTemplates: () -> # Install templates for a default/preview SkinnyJS project
-        templates = [ '/cfg/routes.js', '/cfg/application.js', '/app/views/home/home.html', '/app/controllers/home.js', '/app/models/thing.js', '/app/assets/socket.io.min.js', '/app/assets/reload.js' ]
+        templates = [ '/cfg/routes.js', '/cfg/application.js', '/app/server.js', '/app/views/home/home.html', '/app/controllers/home.js', '/app/models/thing.js', '/app/assets/socket.io.min.js', '/app/assets/reload.js' ]
         templates.forEach (template) => fs.createReadStream(__dirname + template).pipe fs.createWriteStream @cfg.path + template
