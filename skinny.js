@@ -201,27 +201,22 @@
           if (route) {
             ctrlTactic = _this.controllers[controller][action](req, res);
           }
-          return fs.exists(res.view, function(exists) {
-            if (!route) {
-              console.log('No route for', controller + '#' + action, ' Controllers:', _this.controllers);
-            }
-            if (res.headersSent) {
-              return;
-            }
-            if (exists && (ctrlTactic == null)) {
-              return res.sendfile(res.view);
-            }
-            if (!exists && (ctrlTactic == null)) {
-              return res.send('404 - no view');
-            }
-            if (!ctrlTactic) {
-              return;
-            }
-            if (typeof ctrlTactic === "object") {
-              ctrlTactic = JSON.stringify(ctrlTactic);
-            }
-            return res.send(ctrlTactic);
-          });
+          if (!route) {
+            console.log('No route for', controller + '#' + action, ' Controllers:', _this.controllers);
+          }
+          if (res.headersSent) {
+            return;
+          }
+          if (ctrlTactic == null) {
+            return res.sendfile(res.view);
+          }
+          if (!ctrlTactic) {
+            return;
+          }
+          if (typeof ctrlTactic === "object") {
+            ctrlTactic = JSON.stringify(ctrlTactic);
+          }
+          return res.send(ctrlTactic);
         });
       });
     };
