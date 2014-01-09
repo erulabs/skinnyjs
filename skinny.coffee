@@ -89,6 +89,7 @@ module.exports = class Skinnyjs
             route = false if !@controllers[controller]? or !@controllers[controller][action]?
             @controllers[controller]['*']() if @controllers[controller]? and @controllers[controller]['*']? # Run the catchall function if its defined
             @web[method] key, (req, res) => # express.js route -> @web is express.app -> we're adding .get, .post... app[method](), etc.
+                console.log '('+req.connection.remoteAddress+')', colors.cyan+req.method+colors.reset+':', req.url, colors.cyan+'->'+colors.reset, controller+'#'+action
                 res.view = @cfg.layout.views + '/' + controller + '/' + action + '.html'
                 ctrlTactic = @controllers[controller][action](req, res) if route
                 console.log 'No route for', controller + '#' + action, ' Controllers:', @controllers if !route
@@ -105,17 +106,18 @@ module.exports = class Skinnyjs
                 if file.match '/cfg/' # Special conditions for Skinny configuration files - delete require.cache and reload express (or rather, @server())
                     delete require.cache[require.resolve(file)]
                     @server() # Probably not the best idea to always reload if anything is changed here, but we'll leave it transparent.
-                console.log colors.cyan+'browser reloading:'+colors.reset, file.replace(@cfg.path, '')
+                console.log colors.cyan+'Browser reloading:'+colors.reset, file.replace(@cfg.path, '')
                 @io.sockets.emit '__reload', { delay: 0 } # Configurable reload delay
     compileAsset: (file, cb) -> # Compiles common assets... We could use something like Gulp or Grunt or etc etc etc, but this dead simple - compile coffeescript and scss
         if file.substr(-7) == '.coffee'
             fs.readFile file, 'utf8', (err, rawCode) =>
-                console.log colors.red+'autoreload readfile error:'+colors.reset, err if err
-                console.log colors.cyan+'autocompiling coffeescript:'+colors.reset, file.replace(@cfg.path, '')
-                try cs = coffee.compile rawCode
+                console.log colors.red+'compileAsset() error:'+colors.reset, err if err
+                console.log colors.cyan+'CoffeeScript:'+colors.reset, file.replace(@cfg.path, '')
+                try
+                    cs = coffee.compile rawCode
                 catch error
-                    console.log 'coffee compile error, file:', file, 'error:', error
-                finally
+                    return console.log colors.red+'CoffeeScript error:'+colors.reset, file.replace(@cfg.path, '')+':', error.message, "on lines:", error.location.first_line+'-'+error.location.last_line  
+                unless error?
                     fs.writeFile file.replace('.coffee', '.js'), cs, (err) -> console.log colors.red+'autocompile write error! file'+colors.reset, file.replace('.coffee', '.js'), 'error:', err if err
         else if file.substr(-5) == '.scss'
             sass.render 

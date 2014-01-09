@@ -197,6 +197,7 @@
         }
         return _this.web[method](key, function(req, res) {
           var ctrlTactic;
+          console.log('(' + req.connection.remoteAddress + ')', colors.cyan + req.method + colors.reset + ':', req.url, colors.cyan + '->' + colors.reset, controller + '#' + action);
           res.view = _this.cfg.layout.views + '/' + controller + '/' + action + '.html';
           if (route) {
             ctrlTactic = _this.controllers[controller][action](req, res);
@@ -235,7 +236,7 @@
             delete require.cache[require.resolve(file)];
             _this.server();
           }
-          console.log(colors.cyan + 'browser reloading:' + colors.reset, file.replace(_this.cfg.path, ''));
+          console.log(colors.cyan + 'Browser reloading:' + colors.reset, file.replace(_this.cfg.path, ''));
           return _this.io.sockets.emit('__reload', {
             delay: 0
           });
@@ -249,16 +250,17 @@
         return fs.readFile(file, 'utf8', function(err, rawCode) {
           var cs, error;
           if (err) {
-            console.log(colors.red + 'autoreload readfile error:' + colors.reset, err);
+            console.log(colors.red + 'compileAsset() error:' + colors.reset, err);
           }
-          console.log(colors.cyan + 'autocompiling coffeescript:' + colors.reset, file.replace(_this.cfg.path, ''));
+          console.log(colors.cyan + 'CoffeeScript:' + colors.reset, file.replace(_this.cfg.path, ''));
           try {
-            return cs = coffee.compile(rawCode);
+            cs = coffee.compile(rawCode);
           } catch (_error) {
             error = _error;
-            return console.log('coffee compile error, file:', file, 'error:', error);
-          } finally {
-            fs.writeFile(file.replace('.coffee', '.js'), cs, function(err) {
+            return console.log(colors.red + 'CoffeeScript error:' + colors.reset, file.replace(_this.cfg.path, '') + ':', error.message, "on lines:", error.location.first_line + '-' + error.location.last_line);
+          }
+          if (error == null) {
+            return fs.writeFile(file.replace('.coffee', '.js'), cs, function(err) {
               if (err) {
                 return console.log(colors.red + 'autocompile write error! file' + colors.reset, file.replace('.coffee', '.js'), 'error:', err);
               }
