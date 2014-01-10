@@ -7,8 +7,10 @@ by Seandon 'erulabs' Mooy -> admin@erulabs.com -> github.com/erulabs
 The install process will be improved shortly when Skinny.js gets closer to a 0.1 release. For now:
 
     git clone git@github.com:erulabs/skinnyjs
+    cd skinnyjs && npm install && cd ..
     mkdir killerProject && cd killerProject
     node ../skinnyjs/test/init.js
+    npm install node-sass coffee-script
     node app/server.js
 
 Point your browser at http://localhost:9000 and watch as SkinnyJS:
