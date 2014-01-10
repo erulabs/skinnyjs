@@ -4,10 +4,13 @@ A micro ORM-less Javascript MVC Framework that makes your MVC look fat
 
 by Seandon 'erulabs' Mooy -> admin@erulabs.com -> github.com/erulabs
 
-The install process will be improved shortly when Skinny.js gets closer to a 0.1 release. For now:
+The install process will be improved shortly when Skinny.js gets closer to a 0.1 (npm) release. For now:
 
     git clone git@github.com:erulabs/skinnyjs
     cd skinnyjs && npm install && cd ..
+
+Then make a new project (this will also be improved soon - wrapped in a 'skinny' runner):
+
     mkdir killerProject && cd killerProject
     node ../skinnyjs/test/init.js
     npm install node-sass coffee-script
