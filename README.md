@@ -14,11 +14,17 @@ The install process will be improved shortly when Skinny.js gets closer to a 0.1
     node app/server.js
 
 Point your browser at http://localhost:9000 and watch as SkinnyJS:
+
   1) Recompiles SASS and Coffeescript whenever you make changes
+  
   2) Reloads the browser and server modularly when needed
+  
   3) Binds models to MongoDB collections automagically (other NoSQL databases coming soon)
-  4) Is blazingly fast (<1ms route->controller->action->response) because it _only_ serves static content
+  
+  4) Is blazingly fast (\<1ms route->controller->action->response) because it _only_ serves static content
+  
   5) Has the best controller / model syntax you've ever seen (hint: it's just javascript!!!)
+  
   6) Makes every other MVC framework look bloated and opaque
 
 Contributions and suggestions are encouraged!
