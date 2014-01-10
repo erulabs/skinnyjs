@@ -3,5 +3,5 @@ var skinny = require('../skinny.js');
 
 var myLab = new skinny();
 
-var myTest = myLab.server();
+var myTest = myLab.init();
 

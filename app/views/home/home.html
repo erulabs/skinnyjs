@@ -2,15 +2,16 @@
 <!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
 <!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
 <!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+<!--[if gt IE 8]><!--> <html ng-app="chowhound" class="no-js"> <!--<![endif]-->
 	<head>
 		<meta charset="utf-8">
 		<meta http-equiv="X-UA-Compatible" content="IE=edge">
-		<title>Template Project</title>
-		<meta name="description" content="">
+		<title>SkinnyJS</title>
+		<meta name="description" content="A minimal javascript application framework">
 		<meta name="viewport" content="width=device-width">
-		<!-- Place favicon.ico and apple-touch-icon.png in the root directory -->
-		<script src="/assets/socket.io.min.js"></script>
+		<script src="/assets/vendor/socket.io.min.js"></script>
+		<script src="/assets/vendor/angular.min.js"></script>
+		<link href="/assets/vendor/bootstrap.min.css" media="all" rel="stylesheet" type="text/css" />
 		<style>
 			body {
 				font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -38,15 +39,13 @@
 	</head>
 	<body>
 		<main role="main" class="masthead">
-			<div class="container">
-				<h1>Skinny.js</h1>
-				<p class="lead">A micro ORM-less Javascript MVC Framework that makes your MVC look fat</p>
-				<p>Get started right away in app/views/home/home.html and app/controllers/home.js!
-				<br>You're currently looking at "home" controller's "home" method</p>
-				<p>Check out the <a href="https://github.com/erulabs/skinnyjs">github</a> or <a href="mailto:admin@erulabs.com">contact the author</a></p>
-				<h1></h1>
-				<p>Happy Hacking - Seandon 'Eru' Mooy</p>
-			</div>
+			<h1>Skinny.js</h1>
+			<p class="lead">A micro ORM-less Javascript MVC Framework that makes your MVC look fat</p>
+			<p>Get started right away in app/views/home/home.html and app/controllers/home.coffee (or .js)!
+			<br>You're currently looking at "home" controller's "home" method</p>
+			<p>Check out the <a href="https://github.com/erulabs/skinnyjs">github</a> or <a href="mailto:admin@erulabs.com">contact the author</a></p>
+			<h1></h1>
+			<p>Happy Hacking - Seandon 'Eru' Mooy</p>
 		</main>
 		<script src="/assets/reload.js"></script>
 	</body>
