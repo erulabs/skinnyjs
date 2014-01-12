@@ -67,9 +67,9 @@
         return;
       }
       if (opts.force != null) {
-        delete require.cache[require.resolve(this.cfg.layout[type] + '/' + opts.path)];
+        delete require.cache[require.resolve(opts.path)];
       }
-      return this[type][opts.name || opts.path.split('/').splice(-1)[0].replace('.js', '')] = require(this.path.normalize(this.cfg.layout[type] + '/' + opts.path))(this, opts);
+      return this[type][opts.name || opts.path.split(this.path.sep).splice(-1)[0].replace('.js', '')] = require(this.path.normalize(opts.path))(this, opts);
     };
 
     Skinnyjs.prototype.init = function() {
@@ -95,7 +95,7 @@
         return _this.fs.readdir(_this.cfg.layout[moduleType], function(err, modules) {
           return modules.forEach(function(path) {
             return _this.initModule(moduleType, {
-              path: path
+              path: _this.cfg.layout[moduleType] + _this.path.sep + path
             });
           });
         });
@@ -103,7 +103,7 @@
       if (this.cfg.reload) {
         watch = require('node-watch');
         watchAction = function(file) {
-          var ext, path, type;
+          var ext;
           if (_this.fs.lstatSync(file).isDirectory()) {
             return;
           }
@@ -114,21 +114,10 @@
           if ((_this.compiler != null) && _this.compiler[ext]) {
             return _this.compiler[ext](file);
           }
-          if ((function() {
-            var _i, _len, _ref, _results;
-            _ref = this.cfg.layout;
-            _results = [];
-            for (path = _i = 0, _len = _ref.length; _i < _len; path = ++_i) {
-              type = _ref[path];
-              _results.push(file.match(path));
-            }
-            return _results;
-          }).call(_this)) {
-            _this.initModule(type, {
-              path: path,
-              force: true
-            });
-          }
+          _this.initModule(file.split(_this.path.sep).splice(-2)[0], {
+            path: file,
+            force: true
+          });
           console.log(_this.colors.cyan + 'Reloading browser for:' + _this.colors.reset, file.replace(_this.cfg.path, ''));
           return _this.io.sockets.emit('__reload', {
             delay: 0
