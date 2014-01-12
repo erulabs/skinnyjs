@@ -11,7 +11,7 @@ module.exports = (app) ->
 		app._.each app.routes, (obj, route) ->
 			app.server[obj.method or 'get'] route, (req, res) ->
 				app.controllers[obj.controller]['*'](req, res) if app.controllers[obj.controller]['*']?
-				console.log '('+req.connection.remoteAddress+')', req.method+':', req.url, obj.controller+'#'+obj.action
+				console.log '('+req.connection.remoteAddress+')', app.colors.cyan+req.method+':'+app.colors.reset, req.url, obj.controller+'#'+obj.action
 				res.view = app.cfg.layout.views+'/'+obj.controller+'/'+obj.action+'.html'
 				controllerOutput = app.controllers[obj.controller][obj.action](req, res)
 				if controllerOutput?

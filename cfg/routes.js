@@ -19,7 +19,7 @@
           if (app.controllers[obj.controller]['*'] != null) {
             app.controllers[obj.controller]['*'](req, res);
           }
-          console.log('(' + req.connection.remoteAddress + ')', req.method + ':', req.url, obj.controller + '#' + obj.action);
+          console.log('(' + req.connection.remoteAddress + ')', app.colors.cyan + req.method + ':' + app.colors.reset, req.url, obj.controller + '#' + obj.action);
           res.view = app.cfg.layout.views + '/' + obj.controller + '/' + obj.action + '.html';
           controllerOutput = app.controllers[obj.controller][obj.action](req, res);
           if (controllerOutput != null) {

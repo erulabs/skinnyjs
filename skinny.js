@@ -21,12 +21,11 @@
       if (this.cfg.db == null) {
         this.cfg.db = '127.0.0.1:27017';
       }
-      this.cfg.dil = require('os').platform() === 'win32' ? "\\" : '/';
       if (this.cfg.path == null) {
         this.cfg.path = this.path.normalize(process.cwd());
       }
       if (this.cfg.project == null) {
-        this.cfg.project = this.cfg.path.split(this.cfg.dil).splice(-1)[0];
+        this.cfg.project = this.cfg.path.split(this.path.sep).splice(-1)[0];
       }
       if (this.cfg.layout == null) {
         this.cfg.layout = {
@@ -41,8 +40,15 @@
       _ref = this.cfg.layout;
       for (key in _ref) {
         value = _ref[key];
-        this.cfg.layout[key] = this.cfg.path + this.cfg.layout[key];
+        this.cfg.layout[key] = this.path.normalize(this.cfg.path + this.cfg.layout[key]);
       }
+      this.colors = {
+        red: "\u001b[31m",
+        blue: "\u001b[34m",
+        green: "\u001b[32m",
+        cyan: "\u001b[36m",
+        reset: "\u001b[0m"
+      };
       this.db = false;
       this.controllers = {};
       this.models = {};
@@ -54,6 +60,8 @@
     Skinnyjs.prototype.initModule = function(type, opts) {
       if (opts.path == null) {
         return {};
+      } else {
+        this.path.normalize(opts.path);
       }
       if (this.path.extname(opts.path) !== ".js") {
         return;
@@ -61,7 +69,7 @@
       if (opts.force != null) {
         delete require.cache[require.resolve(this.cfg.layout[type] + '/' + opts.path)];
       }
-      return this[type][opts.name || opts.path.split('/').splice(-1)[0].replace('.js', '')] = require(this.cfg.layout[type] + '/' + opts.path)(this, opts);
+      return this[type][opts.name || opts.path.split('/').splice(-1)[0].replace('.js', '')] = require(this.path.normalize(this.cfg.layout[type] + '/' + opts.path))(this, opts);
     };
 
     Skinnyjs.prototype.init = function() {
@@ -80,7 +88,7 @@
       require('mongodb').MongoClient.connect('mongodb://' + this.cfg.db + '/' + this.cfg.project, function(err, db) {
         _this.db = db;
         if (err) {
-          return console.log('MongoDB error:', err);
+          return console.log(_this.colors.red + 'MongoDB error:' + _this.colors.reset, err);
         }
       });
       ['configs', 'controllers', 'models'].forEach(function(moduleType) {
@@ -96,8 +104,11 @@
         watch = require('node-watch');
         watchAction = function(file) {
           var ext, path, type;
+          if (_this.fs.lstatSync(file).isDirectory()) {
+            return;
+          }
           ext = _this.path.extname(file);
-          if ((ext === '.tmp' || ext === '.swp') || file.match('/.git/')) {
+          if ((ext === '.tmp' || ext === '.swp') || file.match(_this.path.sep + '.git')) {
             return;
           }
           if ((_this.compiler != null) && _this.compiler[ext]) {
@@ -114,10 +125,11 @@
             return _results;
           }).call(_this)) {
             _this.initModule(type, {
-              path: path
+              path: path,
+              force: true
             });
           }
-          console.log('Reloading browser for:', file.replace(_this.cfg.path, ''));
+          console.log(_this.colors.cyan + 'Reloading browser for:' + _this.colors.reset, file.replace(_this.cfg.path, ''));
           return _this.io.sockets.emit('__reload', {
             delay: 0
           });
