@@ -18,14 +18,15 @@
       if (this.cfg.reload == null) {
         this.cfg.reload = true;
       }
-      if (this.cfg.path == null) {
-        this.cfg.path = process.cwd();
-      }
       if (this.cfg.db == null) {
         this.cfg.db = '127.0.0.1:27017';
       }
+      this.cfg.dil = require('os').platform() === 'win32' ? "\\" : '/';
+      if (this.cfg.path == null) {
+        this.cfg.path = this.path.normalize(process.cwd());
+      }
       if (this.cfg.project == null) {
-        this.cfg.project = this.cfg.path.split('/').splice(-1)[0];
+        this.cfg.project = this.cfg.path.split(this.cfg.dil).splice(-1)[0];
       }
       if (this.cfg.layout == null) {
         this.cfg.layout = {};
@@ -70,22 +71,20 @@
     };
 
     Skinnyjs.prototype.init = function() {
-      var http, mongo, watch, watchAction,
+      var http, watch, watchAction,
         _this = this;
       http = require('http');
-      mongo = require('mongodb').MongoClient;
       this.express = require('express');
-      this.socketio = require('socket.io');
       this.server = this.express();
       this.server.use('/views', this.express["static"](this.cfg.layout.views));
       this.server.use('/assets', this.express["static"](this.cfg.layout.assets));
       this.server.use(this.express.json());
       this.httpd = http.createServer(this.server);
       this.httpd.listen(this.cfg.port);
-      this.io = this.socketio.listen(this.httpd, {
+      this.io = require('socket.io').listen(this.httpd, {
         log: false
       });
-      mongo.connect('mongodb://' + this.cfg.db + '/' + this.cfg.project, function(err, db) {
+      require('mongodb').MongoClient.connect('mongodb://' + this.cfg.db + '/' + this.cfg.project, function(err, db) {
         _this.db = db;
         if (err) {
           return console.log('MongoDB error:', err);
@@ -160,17 +159,33 @@
               return console.log(err);
             }
             return _this.fs.mkdir(_this.cfg.layout.assets + '/vendor', function(err) {
+              var dirName, _i, _len, _ref1, _results1;
               if (err) {
                 return console.log(err);
               }
-              return ['/cfg/routes.coffee', '/cfg/routes.js', '/cfg/compiler.coffee', '/cfg/compiler.js', '/cfg/application.coffee', '/cfg/application.js', '/app/server.js', '/app/views/home/home.html', '/app/controllers/home.coffee', '/app/controllers/home.js', '/app/models/thing.js', '/app/assets/reload.js', '/app/assets/vendor/socket.io.min.js', '/app/assets/vendor/angular.min.js', '/app/assets/vendor/bootstrap.min.css'].forEach(function(template) {
-                return _this.fs.createReadStream(__dirname + template).pipe(_this.fs.createWriteStream(_this.cfg.path + template));
-              });
+              _ref1 = ['/cfg', '/app'];
+              _results1 = [];
+              for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+                dirName = _ref1[_i];
+                _results1.push(require('ncp').ncp(__dirname + dirName, _this.cfg.path + dirName, function(err) {
+                  if (err) {
+                    return console.log(err);
+                  }
+                }));
+              }
+              return _results1;
             });
           });
         }));
       }
       return _results;
+    };
+
+    Skinnyjs.prototype.copyDir = function(from, to, recursive) {
+      if (typeof from === 'string') {
+        from = [from];
+      }
+      return from.forEach(function(fromDir) {});
     };
 
     return Skinnyjs;

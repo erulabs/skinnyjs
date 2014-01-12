@@ -11,7 +11,8 @@
 		"socket.io": "latest",
 		"coffee-script": "latest",
 		"underscore": "latest",
-		"node-sass": "latest"
+		"node-sass": "latest",
+		"ncp": "latest"
 	},
 	"devDependencies": {
 	},
