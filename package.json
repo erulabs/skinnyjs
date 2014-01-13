@@ -3,10 +3,10 @@
 	"description": "small simple and smart fullstack nodejs framework",
 	"author": "Seandon Mooy",
 	"email": "seandon.mooy@gmail.com",
-	"version": "0.0.2",
-	"bin": [
-		"./bin/skinny.js"
-	],
+	"version": "0.0.3",
+	"bin": {
+		"skinny": "./bin/skinny.js"
+	},
 	"keywords": [
 		"micromvc",
 		"skinny.js",
