@@ -4,17 +4,17 @@ Small simple and smart fullstack nodejs framework
 
 by Seandon 'erulabs' Mooy -> admin@erulabs.com -> github.com/erulabs
 
-The install process will be improved shortly when Skinny.js gets closer to a 0.1 (npm) release. For now:
-
-    git clone git@github.com:erulabs/skinnyjs
-    cd skinnyjs && npm install && cd ..
+    sudo npm install -g skinny.js
 
 Then make a new project (this will also be improved soon - wrapped in a 'skinny' runner):
 
-    mkdir killerProject && cd killerProject
-    node ../skinnyjs/test/init.js
-    npm install node-sass coffee-script
-    node app/server.js
+    skinny new myAwesomeProject
+    cd myAwesomeProject
+    npm istall
+
+Run the development server with:
+
+    skinny server
 
 Point your browser at http://localhost:9000 and watch as SkinnyJS:
 
