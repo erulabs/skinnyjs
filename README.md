@@ -1,6 +1,6 @@
 Skinny.js
 =======
-A micro ORM-less Javascript MVC Framework that makes your MVC look fat
+Small simple and smart fullstack nodejs framework
 
 by Seandon 'erulabs' Mooy -> admin@erulabs.com -> github.com/erulabs
 

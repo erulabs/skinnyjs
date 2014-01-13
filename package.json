@@ -1,9 +1,18 @@
 {
-	"name": "eruslab",
+	"name": "skinny.js",
+	"description": "small simple and smart fullstack nodejs framework",
 	"author": "Seandon Mooy",
 	"email": "seandon.mooy@gmail.com",
 	"version": "0.0.1",
-	"bin": "./labrat.js",
+	"bin": [
+		"./bin/skinny.js"
+	],
+	"keywords": [
+		"micromvc",
+		"skinny.js",
+		"eruslab",
+		"gamelab"
+	],
 	"dependencies": {
 		"node-watch": "latest",
 		"mongodb": "latest",
@@ -12,13 +21,14 @@
 		"coffee-script": "latest",
 		"underscore": "latest",
 		"node-sass": "latest",
-		"ncp": "latest"
+		"ncp": "latest",
+		"commander": "latest"
 	},
-	"devDependencies": {
-	},
+	"main": "./lib/skinny.js",
 	"engines": {
 		"node": ">=0.10"
 	},
+	"homepage": "https://github.com/erulabs/skinnyjs",
 	"repository": {
 		"type": "git",
 		"url": "git@github.com:erulabs/skinnyjs.git"

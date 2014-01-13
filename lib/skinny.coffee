@@ -75,4 +75,7 @@ module.exports = class Skinnyjs
             watch @cfg.layout.configs, (file) => watchAction(file)
     # Create a new SkinnyJS project template - depends on NCP for code clarity
     # Takes no arguments and copies skinnyjs templates into skinny.cfg.path/
-    install: () -> require('ncp').ncp(__dirname+dirName, @cfg.path+dirName, (err) -> console.log err if err) for dirName in ['/cfg', '/app']
+    install: (target) ->
+        target = @cfg.path+dirName unless target?
+        @fs.mkdirSync target unless @fs.existsSync target
+        require('ncp').ncp(__dirname+'/templateProject', target, (err) -> console.log err if err)
