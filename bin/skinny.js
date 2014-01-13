@@ -6,10 +6,8 @@ var cmd 		= require('commander');
 var SkinnyJs 	= require(lib + '/skinny.js');
 var instance 	= new SkinnyJs();
 
-//var myTest 		= instance.install({});
-
 cmd
-	.version('0.0.1')
+	.version(JSON.parse(fs.readFileSync(lib + '/../package.json')).version)
 	.option('new <projectDir>', 'Create new project')
 	.option('server', 'Skinny Dev Server')
 	.parse(process.argv);

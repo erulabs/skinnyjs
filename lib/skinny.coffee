@@ -32,8 +32,17 @@ module.exports = class Skinnyjs
         return unless @path.extname(opts.path) == ".js"
         delete require.cache[require.resolve opts.path] if opts.force?
         # Add the module to skinny - module name is opts.name or the name of the .js file that is loaded
-        # We normalize the path, and require it - then pass it (skinny, opts) -> ie: it is assumed the module is a function
-        @[type][opts.name or opts.path.split(@path.sep).splice(-1)[0].replace '.js', ''] = require(@path.normalize(opts.path))(@, opts)
+        opts.name = if opts.name? then opts.name else opts.path.split(@path.sep).splice(-1)[0].replace '.js', ''
+        @[type][opts.name] = require(@path.normalize(opts.path))(@, opts)
+        # pass to skinny.initModel if its in the cfg.layout.models directory
+        @[type][opts.name] = @initModel @[type][opts.name], opts.name if type == "models"
+    # MongoDB functionality - wrap an object with mongo functionality and return the modified object.
+    initModel: (model, name) ->
+        model.prototype.name = name
+        model.prototype.db = @db.collection(name)
+        model.prototype.all = (cb) -> @db.find().toArray (err, results) => cb(results)
+        model.prototype.save = (cb) -> @db.insert @, () => cb() if cb?
+        return model;
     # Skinny project init / server - takes no arguments
     init: () ->
         # Express JS defaults and listen()
@@ -47,13 +56,16 @@ module.exports = class Skinnyjs
         # Socketio init and listen()
         @io         = require('socket.io').listen @httpd, { log: no }
         # MongoDB init and connect() -> adds skinny.db
-        require('mongodb').MongoClient.connect 'mongodb://'+@cfg.db+'/'+@cfg.project, (err, @db) => return console.log @colors.red+'MongoDB error:'+@colors.reset, err if err
-        # Load modules!
-        [ 'configs', 'controllers', 'models' ].forEach (moduleType) =>
-            # Read each modules directory from skinny.cfg.layout
-            @fs.readdir @cfg.layout[moduleType], (err, modules) =>
-                # For each file in the directory, skinny.initModule() with the correct type and file path
-                modules.forEach (path) => @initModule moduleType, { path: @cfg.layout[moduleType]+@path.sep+path }
+        @mongo =  require('mongodb');
+        @mongo.MongoClient.connect 'mongodb://'+@cfg.db+'/'+@cfg.project, (err, db) =>
+            if err then return console.log @colors.red+'MongoDB error:'+@colors.reset, err else @db = db
+            # Load modules!
+            for moduleType in [ 'configs', 'controllers', 'models' ]
+                # Read each modules directory from skinny.cfg.layout
+                @fs.readdirSync(@cfg.layout[moduleType]).forEach (path) =>
+                    # For each file in the directory, skinny.initModule() with the correct type and file path
+                    @initModule moduleType, { path: @cfg.layout[moduleType]+@path.sep+path }
+            console.log @models, @controllers
         # Our socket.io powered quick-reload -> depends on node-watch for cross-platform functionality
         if @cfg.reload
             watch   = require 'node-watch'
@@ -78,4 +90,5 @@ module.exports = class Skinnyjs
     install: (target) ->
         target = @cfg.path+dirName unless target?
         @fs.mkdirSync target unless @fs.existsSync target
-        require('ncp').ncp(__dirname+'/templateProject', target, (err) -> console.log err if err)
+        require('ncp').ncp __dirname+'/templateProject', target, (err) ->
+            console.log err if err
