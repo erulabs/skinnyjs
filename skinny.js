@@ -133,43 +133,15 @@
     };
 
     Skinnyjs.prototype.install = function() {
-      var component, fsCalls, path, _ref, _results,
-        _this = this;
-      fsCalls = 0;
-      _ref = this.cfg.layout;
+      var dirName, _i, _len, _ref, _results;
+      _ref = ['/cfg', '/app'];
       _results = [];
-      for (component in _ref) {
-        path = _ref[component];
-        fsCalls++;
-        _results.push(this.fs.mkdir(path, function(err) {
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        dirName = _ref[_i];
+        _results.push(require('ncp').ncp(__dirname + dirName, this.cfg.path + dirName, function(err) {
           if (err) {
             return console.log(err);
           }
-          if (--fsCalls !== 0) {
-            return;
-          }
-          return _this.fs.mkdir(_this.cfg.layout.views + '/home', function(err) {
-            if (err) {
-              return console.log(err);
-            }
-            return _this.fs.mkdir(_this.cfg.layout.assets + '/vendor', function(err) {
-              var dirName, _i, _len, _ref1, _results1;
-              if (err) {
-                return console.log(err);
-              }
-              _ref1 = ['/cfg', '/app'];
-              _results1 = [];
-              for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
-                dirName = _ref1[_i];
-                _results1.push(require('ncp').ncp(__dirname + dirName, _this.cfg.path + dirName, function(err) {
-                  if (err) {
-                    return console.log(err);
-                  }
-                }));
-              }
-              return _results1;
-            });
-          });
         }));
       }
       return _results;
