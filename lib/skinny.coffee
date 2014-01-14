@@ -54,9 +54,12 @@ module.exports = class Skinnyjs
         # Express JS defaults and listen()
         @express    = require 'express'
         @server     = @express()
+        # Gzip requests and use JSON by default
+        @server.use @express.compress()
+        @server.use @express.json()
+        # Static asset paths:
         @server.use '/views', @express.static @cfg.layout.views
         @server.use '/assets', @express.static @cfg.layout.assets
-        @server.use @express.json()
         @httpd      = require('http').createServer @server
         @httpd.listen @cfg.port
         # Socketio init and listen()
