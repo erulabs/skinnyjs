@@ -28,14 +28,20 @@ module.exports = class Skinnyjs
     # type matches one of skinny.cfg.layout[] ie: configs, controllers, models...
     # options is an array which must have .path - .force can be passed to reload a library.
     initModule: (type, opts) ->
-        if !opts.path? then return {} else @path.normalize opts.path
-        return unless @path.extname(opts.path) == ".js"
+        if !opts.path? then return false else @path.normalize opts.path
+        return true unless @path.extname(opts.path) == ".js"
         delete require.cache[require.resolve opts.path] if opts.force?
         # Add the module to skinny - module name is opts.name or the name of the .js file that is loaded
         opts.name = if opts.name? then opts.name else opts.path.split(@path.sep).splice(-1)[0].replace '.js', ''
-        @[type][opts.name] = require(@path.normalize(opts.path))(@, opts)
+        try
+            @[type][opts.name] = require(@path.normalize(opts.path))(@, opts)
+        catch error
+            @io.sockets.emit('__skinnyjs', { error: { message: error.message, raw: error.toString(), module: opts } })
+            console.log 'initModule failure on', type, opts, 'error:', error.message, error.toString()
+            return false
         # pass to skinny.initModel if its in the cfg.layout.models directory
         @[type][opts.name] = @initModel @[type][opts.name], opts.name if type == "models"
+        return true
     # MongoDB functionality - wrap an object with mongo functionality and return the modified object.
     initModel: (model, name) ->
         model.prototype.name = name
@@ -71,6 +77,7 @@ module.exports = class Skinnyjs
             watch   = require 'node-watch'
             # Common action for files that change
             watchAction = (file) =>
+                return if file.substr(-4) == '.tmp'
                 # Only fires on win32 - ignore changes to directory caught by watch
                 return if @fs.lstatSync(file).isDirectory()
                 # Make sure file extension isn't a temporary, swap, or version control file
@@ -79,9 +86,10 @@ module.exports = class Skinnyjs
                 # If we have a compiler target matching the extension of the file, fire that off instead of continuing
                 return @compiler[ext](file) if @compiler? and @compiler[ext]
                 # Load the file! Force a reload of it if it exists already and send a refresh signal to the browser and console
-                @initModule file.split(@path.sep).splice(-2)[0], { path: file, force: yes }
-                console.log @colors.cyan+'Reloading browser for:'+@colors.reset, file.replace @cfg.path, ''
-                @io.sockets.emit('__reload', { delay: 0 })
+                
+                if @initModule file.split(@path.sep).splice(-2)[0], { path: file, force: yes }
+                    console.log @colors.cyan+'Reloading browser for:'+@colors.reset, file.replace @cfg.path, ''
+                    @io.sockets.emit('__skinnyjs', { reload: { delay: 0 } })
             # Only watch the app and configs directory for changes
             watch @cfg.layout.app, (file) => watchAction(file)
             watch @cfg.layout.configs, (file) => watchAction(file)
