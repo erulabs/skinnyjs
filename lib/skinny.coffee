@@ -80,7 +80,7 @@ module.exports = class Skinnyjs
             watch   = require 'node-watch'
             # Common action for files that change
             watchAction = (file) =>
-                return if file.substr(-4) == '.tmp'
+                return if file.substr(-4) in [ '.tmp', '.swp' ]
                 # Only fires on win32 - ignore changes to directory caught by watch
                 return if @fs.lstatSync(file).isDirectory()
                 # Make sure file extension isn't a temporary, swap, or version control file
