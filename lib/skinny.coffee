@@ -44,6 +44,7 @@ module.exports = class Skinnyjs
         return true
     # MongoDB functionality - wrap an object with mongo functionality and return the modified object.
     initModel: (model, name) ->
+        console.log 'init model', model, name
         model.prototype.name = name
         model.prototype.db = @db.collection(name)
         model.prototype.all = (cb) -> @db.find().toArray (err, results) => cb(results)
@@ -81,6 +82,8 @@ module.exports = class Skinnyjs
             # Common action for files that change
             watchAction = (file) =>
                 return if file.substr(-4) in [ '.tmp', '.swp' ]
+                # Ignore changes in any directory named "/vendor/"
+                return if file.match /\/vendor\//g
                 # Only fires on win32 - ignore changes to directory caught by watch
                 return if @fs.lstatSync(file).isDirectory()
                 # Make sure file extension isn't a temporary, swap, or version control file
@@ -89,7 +92,6 @@ module.exports = class Skinnyjs
                 # If we have a compiler target matching the extension of the file, fire that off instead of continuing
                 return @compiler[ext](file) if @compiler? and @compiler[ext]
                 # Load the file! Force a reload of it if it exists already and send a refresh signal to the browser and console
-                
                 if @initModule file.split(@path.sep).splice(-2)[0], { path: file, force: yes }
                     console.log @colors.cyan+'Reloading browser for:'+@colors.reset, file.replace @cfg.path, ''
                     @io.sockets.emit('__skinnyjs', { reload: { delay: 0 } })
