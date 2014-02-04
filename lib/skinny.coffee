@@ -33,6 +33,7 @@ module.exports = class Skinnyjs
         delete require.cache[require.resolve opts.path] if opts.force?
         # Add the module to skinny - module name is opts.name or the name of the .js file that is loaded
         opts.name = if opts.name? then opts.name else opts.path.split(@path.sep).splice(-1)[0].replace '.js', ''
+        return delete @[type][opts.name] if opts.clear?
         try
             @[type][opts.name] = require(@path.normalize(opts.path))(@, opts)
         catch error
@@ -84,17 +85,19 @@ module.exports = class Skinnyjs
                 return if file.substr(-4) in [ '.tmp', '.swp' ]
                 # Ignore changes in any directory named "/vendor/"
                 return if file.match /\/vendor\//g
-                # Ignore deleted files:
-                return unless @fs.existsSync file
+                # initModule options:
+                opts = { path: file, force: yes }
+                # Remove modules that have been deleted (also don't continue)
+                opts.clear = true unless @fs.existsSync file
                 # Only fires on win32 - ignore changes to directory caught by watch
-                return if @fs.lstatSync(file).isDirectory()
+                return if @fs.lstatSync(file).isDirectory() if !opts.clear?
                 # Make sure file extension isn't a temporary, swap, or version control file
                 ext = @path.extname(file)
                 return if ext in [ '.tmp', '.swp' ] or file.match @path.sep+'.git'
                 # If we have a compiler target matching the extension of the file, fire that off instead of continuing
                 return @compiler[ext](file) if @compiler? and @compiler[ext]
                 # Load the file! Force a reload of it if it exists already and send a refresh signal to the browser and console
-                if @initModule file.split(@path.sep).splice(-2)[0], { path: file, force: yes }
+                if @initModule file.split(@path.sep).splice(-2)[0], opts
                     console.log @colors.cyan+'Reloading browser for:'+@colors.reset, file.replace @cfg.path, ''
                     @io.sockets.emit('__skinnyjs', { reload: { delay: 0 } })
             # Only watch the app and configs directory for changes
