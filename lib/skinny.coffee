@@ -28,7 +28,9 @@ module.exports = class Skinnyjs
     # type matches one of skinny.cfg.layout[] ie: configs, controllers, models...
     # options is an array which must have .path - .force can be passed to reload a library.
     initModule: (type, opts) ->
+        # Returning true passes task to reloader - returning false refuses reload
         if !opts.path? then return false else @path.normalize opts.path
+        if !opts.path.match /\.js$/ then return true
         # Add the module to skinny - module name is opts.name or the name of the .js file that is loaded
         opts.name = if opts.name? then opts.name else opts.path.split(@path.sep).splice(-1)[0].replace '.js', ''
         # optionally clear the cache and module list
@@ -86,8 +88,7 @@ module.exports = class Skinnyjs
             @watch @cfg.layout.configs, (file) => @fileChangeEvent(file)
     # Matches file paths that skinny uses
     fileMatch: (file) ->
-        if file.match /\/\.git|\.swp$|\/assets\// then return false
-        unless file.match /\.js$/ then return false else return true
+        if file.match /\/\.git|\.swp$|\/assets\// then return false else return true
     # Reload the page and compile code if required - skinny watches files and does stuff!
     fileChangeEvent: (file) ->
         if @fileMatch file
