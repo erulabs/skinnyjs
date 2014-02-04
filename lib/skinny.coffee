@@ -33,15 +33,16 @@ module.exports = class Skinnyjs
         delete require.cache[require.resolve opts.path] if opts.force?
         # Add the module to skinny - module name is opts.name or the name of the .js file that is loaded
         opts.name = if opts.name? then opts.name else opts.path.split(@path.sep).splice(-1)[0].replace '.js', ''
-        return delete @[type][opts.name] if opts.clear?
-        try
-            @[type][opts.name] = require(@path.normalize(opts.path))(@, opts)
-        catch error
-            @io.sockets.emit('__skinnyjs', { error: { message: error.message, raw: error.toString(), module: opts } })
-            console.log 'initModule failure on', type, opts, 'error:', error.message, error.toString()
-            return false
-        # pass to skinny.initModel if its in the cfg.layout.models directory
-        @[type][opts.name] = @initModel @[type][opts.name], opts.name if type == "models"
+        delete @[type][opts.name] if opts.clear? if @[type][opts.name]? if @[type]?
+        unless opts.clear?
+            try
+                @[type][opts.name] = require(@path.normalize(opts.path))(@, opts)
+            catch error
+                @io.sockets.emit('__skinnyjs', { error: { message: error.message, raw: error.toString(), module: opts } })
+                console.log 'initModule failure on', type, opts, 'error:', error.message, error.toString()
+                return false
+            # pass to skinny.initModel if its in the cfg.layout.models directory
+            @[type][opts.name] = @initModel @[type][opts.name], opts.name if type == "models"
         return true
     # MongoDB functionality - wrap an object with mongo functionality and return the modified object.
     initModel: (model, name) ->
@@ -80,18 +81,18 @@ module.exports = class Skinnyjs
             watch   = require 'node-watch'
             # Common action for files that change
             watchAction = (file) =>
-                return if file.substr(-4) in [ '.tmp', '.swp' ]
-                # Ignore changes in any directory named "/vendor/"
-                return if file.match /\/vendor\//g
                 # initModule options:
                 opts = { path: file, force: yes }
+                opts.clear = true if file.substr(-4) in [ '.tmp', '.swp' ]
+                # Ignore changes in any directory named "/vendor/"
+                opts.clear = true if file.indexOf '/assets/' != -1 and file.indexOf '/vendor/' != -1
                 # Remove modules that have been deleted (also don't continue)
                 opts.clear = true unless @fs.existsSync file
                 # Only fires on win32 - ignore changes to directory caught by watch
-                return if @fs.lstatSync(file).isDirectory() if !opts.clear?
+                opts.clear = true if @fs.lstatSync(file).isDirectory() if !opts.clear?
                 # Make sure file extension isn't a temporary, swap, or version control file
                 ext = @path.extname(file)
-                return if ext in [ '.tmp', '.swp' ] or file.match @path.sep+'.git'
+                return false if ext in [ '.tmp', '.swp' ] or file.match @path.sep+'.git'
                 # If we have a compiler target matching the extension of the file, fire that off instead of continuing
                 return @compiler[ext](file) if @compiler? and @compiler[ext]
                 # Load the file! Force a reload of it if it exists already and send a refresh signal to the browser and console
