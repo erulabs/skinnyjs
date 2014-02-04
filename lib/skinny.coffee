@@ -35,8 +35,9 @@ module.exports = class Skinnyjs
         if opts.force?
             delete require.cache[require.resolve opts.path]
             delete @[type][opts.name]
+        skinny = @
         try
-            @[type][opts.name] = require(@path.normalize(opts.path))(@, opts)
+            @[type][opts.name] = require(skinny.path.normalize(opts.path))(skinny, opts)
         catch error
             return @error(error, { type: type, error: 'initModuleException', opts: opts })
         # pass to skinny.initModel if its in the cfg.layout.models directory
@@ -53,7 +54,7 @@ module.exports = class Skinnyjs
     # Log error via socket:
     error: (error, opts) ->
         @io.sockets.emit('__skinnyjs', { error: { message: error.message, raw: error.toString(), module: opts } })
-        console.log @colors.red+'Exception'+@colors.reset, 'on:', opts, 'error:', error.message, error.toString()    
+        console.log @colors.red+'Exception!'+@colors.reset+" ->", "\n"+@colors.cyan+"Skinny details:"+@colors.reset, opts, "\n"+@colors.cyan+"stack:"+@colors.reset, error.stack
     # Skinny project init / server - takes no arguments
     init: () ->
         # Express JS defaults and listen()
@@ -108,18 +109,18 @@ module.exports = class Skinnyjs
         require('ncp').ncp __dirname+'/templateProject', target, (err) -> console.log err if err
     # Parses app.routes and adds them to express
     parseRoutes: () ->
-        app._.each app.routes, (obj, route) ->
-            # For each route, add to app.server (default method is 'get')
-            app.server[obj.method or 'get'] route, (req, res) ->
+        @_.each @routes, (obj, route) =>
+            # For each route, add to @server (default method is 'get')
+            @server[obj.method or 'get'] route, (req, res) =>
                 # Run catchall route if we've found a controller
-                app.controllers[obj.controller]['*'](req, res) if app.controllers[obj.controller]['*']? if app.controllers[obj.controller]?
+                @controllers[obj.controller]['*'](req, res) if @controllers[obj.controller]['*']? if @controllers[obj.controller]?
                 # Log concise request to console
-                console.log '('+req.connection.remoteAddress+')', app.colors.cyan+req.method+':'+app.colors.reset, req.url, obj.controller+'#'+obj.action
+                console.log '('+req.connection.remoteAddress+')', @colors.cyan+req.method+':'+@colors.reset, req.url, obj.controller+'#'+obj.action
                 # build out filepath for expected view (may or may not exist)
-                res.view = app.cfg.layout.views+'/'+obj.controller+'/'+obj.action+'.html'
+                res.view = @cfg.layout.views+'/'+obj.controller+'/'+obj.action+'.html'
                 # Run controller if it exists
                 try
-                    controllerOutput = app.controllers[obj.controller][obj.action](req, res) if app.controllers[obj.controller][obj.action]? if app.controllers[obj.controller]?
+                    controllerOutput = @controllers[obj.controller][obj.action](req, res) if @controllers[obj.controller][obj.action]? if @controllers[obj.controller]?
                 catch error
                     @error(error, { error: 'controllerException', view: res.view })
                 if controllerOutput?
