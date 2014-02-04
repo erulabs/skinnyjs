@@ -38,7 +38,8 @@ module.exports = class Skinnyjs
         try
             @[type][opts.name] = require(@path.normalize(opts.path))(@, opts)
         catch error
-            return @error(error)
+            opts.error = 'initModuleException'
+            return @error(error, opts)
         # pass to skinny.initModel if its in the cfg.layout.models directory
         @[type][opts.name] = @initModel @[type][opts.name], opts.name if type == "models"
         return true
@@ -51,7 +52,7 @@ module.exports = class Skinnyjs
         model.prototype.save = (cb) -> @db.insert @, () => cb() if cb?
         return model;
     # Log error via socket:
-    error: (error) ->
+    error: (error, opts) ->
         @io.sockets.emit('__skinnyjs', { error: { message: error.message, raw: error.toString(), module: opts } })
         console.log @colors.red+'initModule failure'+@colors.reset, 'on:', type, opts, 'error:', error.message, error.toString()    
     # Skinny project init / server - takes no arguments
@@ -121,7 +122,7 @@ module.exports = class Skinnyjs
                 try
                     controllerOutput = app.controllers[obj.controller][obj.action](req, res) if app.controllers[obj.controller][obj.action]? if app.controllers[obj.controller]?
                 catch error
-                    @error(error)
+                    @error(error, { error: 'controllerException', view: res.view })
                 if controllerOutput?
                     # If the controller sent headers, stop all activity - the controller is handeling this request
                     return if res.headersSent
