@@ -38,26 +38,26 @@ module.exports = class Skinnyjs
         try
             @[type][opts.name] = require(@path.normalize(opts.path))(@, opts)
         catch error
-            @io.sockets.emit('__skinnyjs', { error: { message: error.message, raw: error.toString(), module: opts } })
-            console.log 'initModule failure on', type, opts, 'error:', error.message, error.toString()
-            return false
+            return @error(error)
         # pass to skinny.initModel if its in the cfg.layout.models directory
         @[type][opts.name] = @initModel @[type][opts.name], opts.name if type == "models"
         return true
     # MongoDB functionality - wrap an object with mongo functionality and return the modified object.
+    # This is a massive todo - please pretend this doesnt exist :P
     initModel: (model, name) ->
         return model if typeof model.prototype == undefined
         model.prototype.name = name
         model.prototype.db = @db.collection(name)
-        model.prototype.all = (cb) -> @db.find().toArray (err, results) => cb(results)
         model.prototype.save = (cb) -> @db.insert @, () => cb() if cb?
         return model;
+    # Log error via socket:
+    error: (error) ->
+        @io.sockets.emit('__skinnyjs', { error: { message: error.message, raw: error.toString(), module: opts } })
+        console.log @colors.red+'initModule failure'+@colors.reset, 'on:', type, opts, 'error:', error.message, error.toString()    
     # Skinny project init / server - takes no arguments
     init: () ->
         # Express JS defaults and listen()
-        @express = require 'express'
-        @server = @express()
-        # Gzip requests and use JSON by default
+        @express = require 'express' ; @server = @express()
         @server.use @express.compress()
         @server.use @express.json()
         # Static asset paths:
@@ -118,15 +118,18 @@ module.exports = class Skinnyjs
                 # build out filepath for expected view (may or may not exist)
                 res.view = app.cfg.layout.views+'/'+obj.controller+'/'+obj.action+'.html'
                 # Run controller if it exists
-                controllerOutput = app.controllers[obj.controller][obj.action](req, res) if app.controllers[obj.controller][obj.action]? if app.controllers[obj.controller]?
+                try
+                    controllerOutput = app.controllers[obj.controller][obj.action](req, res) if app.controllers[obj.controller][obj.action]? if app.controllers[obj.controller]?
+                catch error
+                    @error(error)
                 if controllerOutput?
                     # If the controller sent headers, stop all activity - the controller is handeling this request
                     return if res.headersSent
                     # If the controller returned some data, sent it down the wire:
                     controllerOutput = JSON.stringify controllerOutput if typeof controllerOutput == "object"
                     return res.send controllerOutput if controllerOutput?
-                else
+                else if @fs.existsSync res.view
                     # If the controller didn't return anything, render the view (assuming it exists)
-                    return res.sendfile res.view if @fs.existsSync res.view
+                    return res.sendfile res.view
                 # If the controller didn't return anything and the view doesn't exist (ie: we're still here!), then 404
-                return res.send '404'
+                else return res.send '404'
