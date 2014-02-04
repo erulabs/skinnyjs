@@ -84,6 +84,8 @@ module.exports = class Skinnyjs
                 return if file.substr(-4) in [ '.tmp', '.swp' ]
                 # Ignore changes in any directory named "/vendor/"
                 return if file.match /\/vendor\//g
+                # Ignore deleted files:
+                return unless @fs.existsSync file
                 # Only fires on win32 - ignore changes to directory caught by watch
                 return if @fs.lstatSync(file).isDirectory()
                 # Make sure file extension isn't a temporary, swap, or version control file
