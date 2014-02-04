@@ -34,15 +34,16 @@ module.exports = class Skinnyjs
         # Add the module to skinny - module name is opts.name or the name of the .js file that is loaded
         opts.name = if opts.name? then opts.name else opts.path.split(@path.sep).splice(-1)[0].replace '.js', ''
         delete @[type][opts.name] if opts.clear? if @[type][opts.name]? if @[type]?
-        unless opts.clear?
-            try
-                @[type][opts.name] = require(@path.normalize(opts.path))(@, opts)
-            catch error
-                @io.sockets.emit('__skinnyjs', { error: { message: error.message, raw: error.toString(), module: opts } })
-                console.log 'initModule failure on', type, opts, 'error:', error.message, error.toString()
-                return false
-            # pass to skinny.initModel if its in the cfg.layout.models directory
-            @[type][opts.name] = @initModel @[type][opts.name], opts.name if type == "models"
+        # Returning false doesn't notify browser of file change (in the case of clearing - no need to post updates)
+        return false if opts.clear?
+        try
+            @[type][opts.name] = require(@path.normalize(opts.path))(@, opts)
+        catch error
+            @io.sockets.emit('__skinnyjs', { error: { message: error.message, raw: error.toString(), module: opts } })
+            console.log 'initModule failure on', type, opts, 'error:', error.message, error.toString()
+            return false
+        # pass to skinny.initModel if its in the cfg.layout.models directory
+        @[type][opts.name] = @initModel @[type][opts.name], opts.name if type == "models"
         return true
     # MongoDB functionality - wrap an object with mongo functionality and return the modified object.
     initModel: (model, name) ->
@@ -81,24 +82,21 @@ module.exports = class Skinnyjs
             watch   = require 'node-watch'
             # Common action for files that change
             watchAction = (file) =>
-                # initModule options:
                 opts = { path: file, force: yes }
-                opts.clear = true if file.substr(-4) in [ '.tmp', '.swp' ]
-                # Ignore changes in any directory named "/vendor/"
-                opts.clear = true if file.indexOf '/assets/' != -1 and file.indexOf '/vendor/' != -1
+                # Skip temporary, swap, vendor, asset and version control files
+                #skip = true if (file.substr(-4) in [ '.tmp', '.swp' ]) or (file.indexOf '/assets/' != -1 and file.indexOf '/vendor/' != -1) or (file.match @path.sep+'.git')
+                skip = true if file.match @path.set+'.git' or file.match @path.set+'assets' or file.match @path.set+'vendor' or file.substr(-4) == '.tmp' or file.substr(-4) == '.swp'
                 # Remove modules that have been deleted (also don't continue)
                 opts.clear = true unless @fs.existsSync file
                 # Only fires on win32 - ignore changes to directory caught by watch
-                opts.clear = true if @fs.lstatSync(file).isDirectory() if !opts.clear?
-                # Make sure file extension isn't a temporary, swap, or version control file
-                ext = @path.extname(file)
-                return false if ext in [ '.tmp', '.swp' ] or file.match @path.sep+'.git'
+                skip = true if @fs.lstatSync(file).isDirectory() if !opts.clear?
                 # If we have a compiler target matching the extension of the file, fire that off instead of continuing
-                return @compiler[ext](file) if @compiler? and @compiler[ext]
+                return @compiler[@path.extname(file)](file) if @compiler? and @compiler[@path.extname(file)]
                 # Load the file! Force a reload of it if it exists already and send a refresh signal to the browser and console
-                if @initModule file.split(@path.sep).splice(-2)[0], opts
-                    console.log @colors.cyan+'Reloading browser for:'+@colors.reset, file.replace @cfg.path, ''
-                    @io.sockets.emit('__skinnyjs', { reload: { delay: 0 } })
+                unless skip? 
+                    if @initModule file.split(@path.sep).splice(-2)[0], opts
+                        console.log @colors.cyan+'Reloading browser for:'+@colors.reset, file.replace @cfg.path, ''
+                        @io.sockets.emit('__skinnyjs', { reload: { delay: 0 } })
             # Only watch the app and configs directory for changes
             watch @cfg.layout.app, (file) => watchAction(file)
             watch @cfg.layout.configs, (file) => watchAction(file)
@@ -107,5 +105,29 @@ module.exports = class Skinnyjs
     install: (target) ->
         target = @cfg.path+dirName unless target?
         @fs.mkdirSync target unless @fs.existsSync target
-        require('ncp').ncp __dirname+'/templateProject', target, (err) ->
-            console.log err if err
+        # Recursively copy the template project into our target
+        require('ncp').ncp __dirname+'/templateProject', target, (err) -> console.log err if err
+    # Parses app.routes and adds them to express
+    parseRoutes: () ->
+        app._.each app.routes, (obj, route) ->
+            # For each route, add to app.server (default method is 'get')
+            app.server[obj.method or 'get'] route, (req, res) ->
+                # Run catchall route if we've found a controller
+                app.controllers[obj.controller]['*'](req, res) if app.controllers[obj.controller]['*']? if app.controllers[obj.controller]?
+                # Log concise request to console
+                console.log '('+req.connection.remoteAddress+')', app.colors.cyan+req.method+':'+app.colors.reset, req.url, obj.controller+'#'+obj.action
+                # build out filepath for expected view (may or may not exist)
+                res.view = app.cfg.layout.views+'/'+obj.controller+'/'+obj.action+'.html'
+                # Run controller if it exists
+                controllerOutput = app.controllers[obj.controller][obj.action](req, res) if app.controllers[obj.controller][obj.action]? if app.controllers[obj.controller]?
+                if controllerOutput?
+                    # If the controller sent headers, stop all activity - the controller is handeling this request
+                    return if res.headersSent
+                    # If the controller returned some data, sent it down the wire:
+                    controllerOutput = JSON.stringify controllerOutput if typeof controllerOutput == "object"
+                    return res.send controllerOutput if controllerOutput?
+                else
+                    # If the controller didn't return anything, render the view (assuming it exists)
+                    return res.sendfile res.view if @fs.existsSync res.view
+                # If the controller didn't return anything and the view doesn't exist (ie: we're still here!), then 404
+                return res.send '404'
