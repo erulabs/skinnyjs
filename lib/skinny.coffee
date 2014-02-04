@@ -21,6 +21,8 @@ module.exports = class Skinnyjs
         @cfg.layout             = { app: '/app', configs: '/cfg', models: '/app/models', views: '/app/views', controllers: '/app/controllers', assets: '/app/assets' } unless @cfg.layout?
         # Prepend directory structure values with our cfg.path (ie: build the full filesystem path to any given file)
         @cfg.layout[key]        = @path.normalize(@cfg.path + @cfg.layout[key]) for key, value of @cfg.layout
+        # Skinny module list (must corespond to directory names)
+        @cfg.moduleTypes        = [ 'configs', 'controllers', 'models' ]
         # Some console colors and initial data structures
         @colors                 = { red: "\u001b[31m", blue: "\u001b[34m", green: "\u001b[32m", cyan: "\u001b[36m", reset: "\u001b[0m" }
         @db = false; @controllers = {}; @models = {}; @routes = {}; @configs = {}; @compiler = {};
@@ -31,6 +33,10 @@ module.exports = class Skinnyjs
         # Returning true passes task to reloader - returning false refuses reload
         if !opts.path? then return false else @path.normalize opts.path
         if !opts.path.match /\.js$/ then return true
+        # If this is not a known module type then do not reload page - instead log a message - TODO: auto-restart skinny
+        if type not in @cfg.moduleTypes
+            console.log @colors.cyan+'Unhandled change on:'+@colors.reset, opts.path, @colors.cyan+"you may want to restart Skinny"+@colors.reset
+            return false
         # Add the module to skinny - module name is opts.name or the name of the .js file that is loaded
         opts.name = if opts.name? then opts.name else opts.path.split(@path.sep).splice(-1)[0].replace '.js', ''
         # optionally clear the cache and module list
@@ -75,7 +81,7 @@ module.exports = class Skinnyjs
         @mongo.MongoClient.connect 'mongodb://'+@cfg.db+'/'+@cfg.project, (err, db) =>
             if err then return console.log @colors.red+'MongoDB error:'+@colors.reset, err else @db = db
             # Load modules!
-            for moduleType in [ 'configs', 'controllers', 'models' ]
+            for moduleType in @cfg.moduleTypes
                 # Read each modules directory from skinny.cfg.layout
                 @fs.readdirSync(@cfg.layout[moduleType]).forEach (path) =>
                     # For each file in the directory, skinny.initModule() with the correct type and file path
