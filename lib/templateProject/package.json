@@ -6,6 +6,7 @@
 	"dependencies": {
 		"node-sass": "latest",
 		"coffee-script": "latest",
-		"skinny.js": "latest"
+		"skinny.js": "latest",
+		"bower": "latest"
 	}
 }
