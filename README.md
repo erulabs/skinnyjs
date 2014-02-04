@@ -47,12 +47,12 @@ Add skinny.js to your path or alias:
 
 Create a new project:
 
-   skinny new awesomeProject
+    skinny new awesomeProject
 
 Modify the project to use your development version of skinny:
 
 in 'myawesomeProject/app/server.js' change `skinnyjs = require('skinny.js')` to something like:
 
-  skinnyjs = require('../../skinnyjs/lib/skinny.js')
+    skinnyjs = require('../../skinnyjs/lib/skinny.js')
 
 You can then run something like "coffee -cw ." in the skinnyjs directory - keep in mind your skinny server _will not_ automatically reload when skinnyjs is changed. You'll need to stop and start the server manually.
