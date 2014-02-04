@@ -45,7 +45,6 @@ module.exports = class Skinnyjs
         return true
     # MongoDB functionality - wrap an object with mongo functionality and return the modified object.
     initModel: (model, name) ->
-        console.log 'init model', model, name
         model.prototype.name = name
         model.prototype.db = @db.collection(name)
         model.prototype.all = (cb) -> @db.find().toArray (err, results) => cb(results)
@@ -76,7 +75,6 @@ module.exports = class Skinnyjs
                 @fs.readdirSync(@cfg.layout[moduleType]).forEach (path) =>
                     # For each file in the directory, skinny.initModule() with the correct type and file path
                     @initModule moduleType, { path: @cfg.layout[moduleType]+@path.sep+path }
-            console.log @models, @controllers
         # Our socket.io powered quick-reload -> depends on node-watch for cross-platform functionality
         if @cfg.reload
             watch   = require 'node-watch'
