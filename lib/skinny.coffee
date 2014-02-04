@@ -47,6 +47,7 @@ module.exports = class Skinnyjs
         return true
     # MongoDB functionality - wrap an object with mongo functionality and return the modified object.
     initModel: (model, name) ->
+        return model if typeof model.prototype == undefined
         model.prototype.name = name
         model.prototype.db = @db.collection(name)
         model.prototype.all = (cb) -> @db.find().toArray (err, results) => cb(results)
@@ -84,7 +85,6 @@ module.exports = class Skinnyjs
             watchAction = (file) =>
                 opts = { path: file, force: yes }
                 # Skip temporary, swap, vendor, asset and version control files
-                #skip = true if (file.substr(-4) in [ '.tmp', '.swp' ]) or (file.indexOf '/assets/' != -1 and file.indexOf '/vendor/' != -1) or (file.match @path.sep+'.git')
                 skip = true if file.match @path.set+'.git' or file.match @path.set+'assets' or file.match @path.set+'vendor' or file.substr(-4) == '.tmp' or file.substr(-4) == '.swp'
                 # Remove modules that have been deleted (also don't continue)
                 opts.clear = true unless @fs.existsSync file
