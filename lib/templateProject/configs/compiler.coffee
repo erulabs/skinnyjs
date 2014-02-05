@@ -12,6 +12,7 @@ module.exports = (app) ->
             unless error?
                 app.fs.writeFile file.replace('.coffee', '.js'), cs, (err) -> console.log app.clr.red+'autocompile write error! file'+app.clr.reset, file.replace('.coffee', '.js'), 'error:', err if err
     app.compiler['.scss'] = (file) ->
+        console.log app.clr.cyan+'SASS:'+app.clr.reset, file.replace(app.cfg.path, '')
         sass.render 
             file: file
             success: (css) => app.fs.writeFile file.replace('.scss', '.css'), css, (err) -> console.log app.clr.red+'autocompile write error! file'+app.clr.reset, file.replace('.scss', '.css'), 'error:', err if err

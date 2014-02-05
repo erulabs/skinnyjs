@@ -52,7 +52,7 @@ module.exports = class Skinnyjs
     # Returning true passes task to reloader - returning false refuses reload
     if !opts.path? then return false else @path.normalize opts.path
     if !opts.path.match /\.js$/ or opts.path.match /\/assets\// then return true
-    # if this is a client module, continue to the compiler/reloader - it's not a server module
+    # if this is a client module, continue to the reloader - it's not a server module
     if opts.path.match /\/client\// then return true
     # If this is not a known module type then do not reload page - instead log a message - TODO: auto-restart skinny
     if type not in @cfg.moduleTypes then console.log @clr.cyan+'Unhandled change on:'+@clr.reset, opts.path, @clr.cyan+"you may want to restart Skinny"+@clr.reset ; return false
@@ -65,6 +65,7 @@ module.exports = class Skinnyjs
       return @error error, { type: type, error: 'initModuleException', opts: opts }
     # pass to skinny.initModel if its in the cfg.layout.models directory
     @[type][opts.name] = @initModel @[type][opts.name], opts.name if type == "models"
+    return true
   # Log error via socket:
   error: (error, opts) ->
     @io.sockets.emit '__skinnyjs', { error: { message: error.message, raw: error.toString(), module: opts } }
