@@ -18,7 +18,7 @@ module.exports = class Skinnyjs
         # Project name is the name of this directory by default
         @cfg.project            = @cfg.path.split(@path.sep).splice(-1)[0] unless @cfg.project?
         # Directory structure - existing values are required.
-        @cfg.layout             = { app: '/app', configs: '/cfg', models: '/app/models', views: '/app/views', controllers: '/app/controllers', assets: '/app/client' } unless @cfg.layout?
+        @cfg.layout             = { app: '/app', configs: '/configs', models: '/app/models', views: '/app/views', controllers: '/app/controllers', assets: '/app/client' } unless @cfg.layout?
         # Prepend directory structure values with our cfg.path (ie: build the full filesystem path to any given file)
         @cfg.layout[key]        = @path.normalize(@cfg.path + @cfg.layout[key]) for key, value of @cfg.layout
         # Skinny module list (must corespond to directory names)
