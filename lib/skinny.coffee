@@ -28,7 +28,7 @@ module.exports = class Skinnyjs
   # MongoDB functionality - wrap an object with mongo functionality and return the modified object.
   initModel: (model, name) ->
     # Do not extend non-functions - leave them alone
-    return model if typeof model.prototype == undefined else skinny = @
+    if typeof model.prototype == undefined then return model else skinny = @
     # Give each model .find, .new, .remove, etc which is a loose wrapper around the mongo collection
     if !model.find? then model.find = (query, cb) ->
       skinny.db.collection(name).find(query).toArray (err, results) =>
@@ -73,19 +73,21 @@ module.exports = class Skinnyjs
   init: (cb) ->
     # Express JS defaults and listen()
     @express = require 'express' ; @server = @express()
+    @server.use @express.json()
     @httpd = require('http').createServer @server
     @httpd.listen @cfg.port
     # Socketio init and listen()
     @io = require('socket.io').listen @httpd, { log: no }
     # MongoDB init and connect() -> defines @db
     @mongo = require 'mongodb'
-    @mongo.MongoClient.connect 'mongodb://'+@cfg.db+'/'+@cfg.project, (err, db) => if err then return console.log @clr.red+'MongoDB error:'+@clr.reset, err else @db = db
-    # Read each modules directories and for each file in the directory, skinny.initModule(file) with the correct type and file path
-    for moduleType in @cfg.moduleTypes
-      @fs.readdirSync(@cfg.layout[moduleType]).forEach (path) => if @fileMatch path then @initModule moduleType, { path: @cfg.layout[moduleType]+@path.sep+path }
-    # Delay application init 100 ms - prevents the need for complex ordering - gives time for modules to load
-    setTimeout () -> cb(),
-    100
+    @mongo.MongoClient.connect 'mongodb://'+@cfg.db+'/'+@cfg.project, (err, db) =>
+      if err then return console.log @clr.red+'MongoDB error:'+@clr.reset, err else @db = db
+      # Read each modules directories and for each file in the directory, skinny.initModule(file) with the correct type and file path
+      for moduleType in @cfg.moduleTypes
+        @fs.readdirSync(@cfg.layout[moduleType]).forEach (path) => if @fileMatch path then @initModule moduleType, { path: @cfg.layout[moduleType]+@path.sep+path }
+      # Delay application init 100 ms - prevents the need for complex ordering - gives time for modules to load
+      setTimeout () -> if cb? then cb(),
+      50
     # Our socket.io powered quick-reload -> depends on node-watch for cross-platform functionality
     # fires @fileChangeEvent on file changes in the 'watched' directories
     if @cfg.reload
