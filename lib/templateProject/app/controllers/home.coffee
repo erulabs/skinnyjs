@@ -1,9 +1,9 @@
 module.exports = (app) ->
-    '*': () ->
-    	# Catch all route
-    	# this method will be run before any other method on this controller (per request)
-    home: (req, res) ->
-        # This is a controller!
+	'*': () ->
+		# Catch all route
+		# this method will be run before any other method on this controller (per request)
+	home: (req, res) ->
+		# This is a controller!
 		# Take some action based on a route here
 
 		# You can manually work with express if you'd like (using the req, res objects), for instance:
