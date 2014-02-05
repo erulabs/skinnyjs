@@ -25,7 +25,30 @@ module.exports = class Skinnyjs
         @cfg.moduleTypes        = [ 'configs', 'controllers', 'models' ]
         # Some console colors and initial data structures
         @colors                 = { red: "\u001b[31m", blue: "\u001b[34m", green: "\u001b[32m", cyan: "\u001b[36m", reset: "\u001b[0m" }
-        @db = false; @controllers = {}; @models = {}; @routes = {}; @configs = {}; @compiler = {};
+        @db = false; @controllers = {}; @models = {}; @routes = {}; @configs = {}; @compiler = {};                
+    # MongoDB functionality - wrap an object with mongo functionality and return the modified object.
+    # This is a massive todo - please pretend this doesnt exist :P
+    initModel: (model, name) ->
+        return model if typeof model.prototype == undefined
+        skinny = @
+        if !model.find? then model.find = (query, cb) ->
+            if typeof query == 'function'
+                cb = query
+                query = {}
+            skinny.db.collection(name).find(query).toArray (err, results) =>
+                results.forEach (result) =>
+                    skinny._.each model, (value, key) => result[key] = value unless key in [ 'db', 'find' ]
+                    if !result.save? then result.save = (cb) ->
+                        skinny.db.collection(name).insert @, () -> if cb? then cb()
+                cb results
+        if !model.new? then model.new = () -> return @
+        if !model.remove? then model.remove = (query, cb) ->
+            if typeof query == 'function'
+                cb = query
+                query = {}
+            skinny.db.collection(name).remove query, () -> if cb? then cb()
+        model.db = @db.collection(name)
+        return model;
     # Generic module loader - loads js modules with the npm "modules.exports =" pattern from the skinny.init()
     # type matches one of skinny.cfg.layout[] ie: configs, controllers, models...
     # options is an array which must have .path - .force can be passed to reload a library.
@@ -53,14 +76,6 @@ module.exports = class Skinnyjs
         # pass to skinny.initModel if its in the cfg.layout.models directory
         @[type][opts.name] = @initModel @[type][opts.name], opts.name if type == "models"
         return true
-    # MongoDB functionality - wrap an object with mongo functionality and return the modified object.
-    # This is a massive todo - please pretend this doesnt exist :P
-    initModel: (model, name) ->
-        return model if typeof model.prototype == undefined
-        model.prototype.name = name
-        model.prototype.db = @db.collection(name)
-        model.prototype.save = (cb) -> @db.insert @, () => cb() if cb?
-        return model;
     # Log error via socket:
     error: (error, opts) ->
         @io.sockets.emit('__skinnyjs', { error: { message: error.message, raw: error.toString(), module: opts } })
