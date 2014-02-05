@@ -31,6 +31,7 @@ module.exports = class Skinnyjs
     if typeof model.prototype == undefined then return model else skinny = @
     # Give each model .find, .new, .remove, etc which is a loose wrapper around the mongo collection
     if !model.find? then model.find = (query, cb) ->
+      if typeof query == 'function' then cb = query ; query = {}
       skinny.db.collection(name).find(query).toArray (err, results) =>
         # Append the functionality of the model into each result. TODO: Improve this code
         results.forEach (result) =>
@@ -113,7 +114,7 @@ module.exports = class Skinnyjs
         delete @cache[file] if @cache[file]?
       # Load the file! Force a reload of it if it exists already and send a refresh signal to the browser and console
       if @initModule file.split(@path.sep).splice(-2)[0], { path: file, force: yes, clear: !exists }
-        console.log @clr.cyan+'Reloading browser for:'+@clr.reset, file.replace @cfg.path, ''
+        console.log '-->', @clr.green+'Reloading browser'+@clr.reset
         @io.sockets.emit('__skinnyjs', { reload: { delay: 0 } })
   # Create a new SkinnyJS project template - copies skinnyjs templates into skinny.cfg.path/
   install: (target) ->

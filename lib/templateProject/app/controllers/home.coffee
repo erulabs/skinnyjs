@@ -21,3 +21,36 @@ module.exports = (app) ->
 		# You can also return nothing (or explicitly "undefined"), in which case Skinny will assume
 		# that you want to use a view (it'll look in app/views/CONTROLLERNAME/ACTIONNAME.html)
 		# if we've dropped all the way down here and that file doesn't exist, then we'll finally 404
+
+		# An example of using models:
+		# models get their names from their file (so models/thing.js is app.models.thing)
+		# they are automatically mongoDB collections, and that collection is model.db
+		# (https://github.com/mongodb/node-mongodb-native "collection" object)
+		
+		# SO, onto mongo queries! A simple "raw" insert:
+		# app.models.thing.db.insert { somedata: 'yay' }, (err, docs) -> console.log 'Yay, we inserted our model!'		
+		
+		# A simple find:
+		# app.models.thing.find (results) -> console.log results
+		
+		# A more complex find:
+		# app.models.thing.find { someFilter: 'foobar' }, (results) -> console.log results
+
+		# It's important to note that your model functionality lives in both places (the model Class, and the model Instance).
+		# For example: app.models.thing.someFunctionality() runs as expected
+		# (assuming the function doesn't rely on some data thats ONLY in the database) but also:
+		# app.models.thing.find (results) -> results[0].someFunctionality()
+
+		# Likewise, you can create models by invoking the models .new() function or just directly insert data into the database
+		# the only difference being that .new() can be overridden by the model
+
+		# some example functionality:
+		# app.models.thing.remove()
+		# myThing = app.models.thing.new()
+		# console.log 'some functionality:', myThing.someFunctionality()
+		# app.models.thing.find (results) ->
+		#	console.log results
+
+		# explicitly tell skinny to render our view - this is inherently the output of javascript functions which do not "return"
+		# but sometimes (in the case of using coffee-script)
+		return undefined
