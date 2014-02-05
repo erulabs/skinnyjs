@@ -18,7 +18,7 @@ module.exports = class Skinnyjs
         # Project name is the name of this directory by default
         @cfg.project            = @cfg.path.split(@path.sep).splice(-1)[0] unless @cfg.project?
         # Directory structure - existing values are required.
-        @cfg.layout             = { app: '/app', configs: '/cfg', models: '/app/models', views: '/app/views', controllers: '/app/controllers', assets: '/app/assets' } unless @cfg.layout?
+        @cfg.layout             = { app: '/app', configs: '/cfg', models: '/app/models', views: '/app/views', controllers: '/app/controllers', assets: '/app/client' } unless @cfg.layout?
         # Prepend directory structure values with our cfg.path (ie: build the full filesystem path to any given file)
         @cfg.layout[key]        = @path.normalize(@cfg.path + @cfg.layout[key]) for key, value of @cfg.layout
         # Skinny module list (must corespond to directory names)
@@ -32,7 +32,9 @@ module.exports = class Skinnyjs
     initModule: (type, opts) ->
         # Returning true passes task to reloader - returning false refuses reload
         if !opts.path? then return false else @path.normalize opts.path
-        if !opts.path.match /\.js$/ then return true
+        if !opts.path.match /\.js$/ or opts.path.match /\/assets\// then return true
+        # if this is a client module, continue to the compiler/reloader - it's not a server module
+        if opts.path.match /\/client\// then return true
         # If this is not a known module type then do not reload page - instead log a message - TODO: auto-restart skinny
         if type not in @cfg.moduleTypes
             console.log @colors.cyan+'Unhandled change on:'+@colors.reset, opts.path, @colors.cyan+"you may want to restart Skinny"+@colors.reset
@@ -93,8 +95,7 @@ module.exports = class Skinnyjs
             @watch @cfg.layout.app, (file) => @fileChangeEvent(file)
             @watch @cfg.layout.configs, (file) => @fileChangeEvent(file)
     # Matches file paths that skinny uses
-    fileMatch: (file) ->
-        if file.match /\/\.git|\.swp$|\/assets\// then return false else return true
+    fileMatch: (file) -> if file.match /\/\.git|\.swp$|\.tmp$/ then return false else return true
     # Reload the page and compile code if required - skinny watches files and does stuff!
     fileChangeEvent: (file) ->
         if @fileMatch file
