@@ -74,6 +74,9 @@ module.exports = class Skinnyjs
     # Express JS defaults and listen()
     @express = require 'express' ; @server = @express()
     @server.use @express.json()
+    @server.use @express.compress()
+    @server.use '/views', @express.static @cfg.layout.views
+    @server.use '/assets', @express.static @cfg.layout.assets
     @httpd = require('http').createServer @server
     @httpd.listen @cfg.port
     # Socketio init and listen()
