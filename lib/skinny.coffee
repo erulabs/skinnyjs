@@ -109,12 +109,10 @@ module.exports = class Skinnyjs
         if @fs.lstatSync(file).isDirectory() then return false
         # Pass the file to a @compiler if one matches the file extname
         if compile = @compiler[@path.extname file] then return compile file
-      else
-        console.log 'unload test - cache:', @cache, 'file path:', file
-        delete @cache[file] if @cache[file]?
+      else delete @cache[file] if @cache[file]?
       # Load the file! Force a reload of it if it exists already and send a refresh signal to the browser and console
       if @initModule file.split(@path.sep).splice(-2)[0], { path: file, force: yes, clear: !exists }
-        console.log '-->', @clr.green+'Reloading browser'+@clr.reset
+        console.log '-->', @clr.green+'Reloading browser'+@clr.reset, '-', file.replace(@cfg.path, '')
         @io.sockets.emit('__skinnyjs', { reload: { delay: 0 } })
   # Create a new SkinnyJS project template - copies skinnyjs templates into skinny.cfg.path/
   install: (target) ->

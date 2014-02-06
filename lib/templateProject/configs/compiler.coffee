@@ -16,4 +16,4 @@ module.exports = (app) ->
         sass.render 
             file: file
             success: (css) => app.fs.writeFile file.replace('.scss', '.css'), css, (err) -> console.log app.clr.red+'autocompile write error! file'+app.clr.reset, file.replace('.scss', '.css'), 'error:', err if err
-            error: (error) => console.log('SCSS Compile error:', error);
+            error: (error) => console.log app.clr.red+'SCSS Compile error:'+app.clr.reset, error
