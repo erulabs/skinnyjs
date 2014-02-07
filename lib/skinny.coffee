@@ -61,7 +61,9 @@ module.exports = class Skinnyjs
     opts.name = if opts.name? then opts.name else opts.path.split(@path.sep).splice(-1)[0].replace '.js', ''
     # optionally clear the cache and module list
     if opts.force? then delete require.cache[require.resolve opts.path] ; delete @[type][opts.name]
-    try @[type][opts.name] = require(@path.normalize opts.path)(@, opts)
+    module = require @path.normalize opts.path
+    if typeof module != 'function' then return console.log @clr.red+"WARNING:"+@clr.reset, 'the', type.substr(0, type.length-1), '"'+opts.name+'"', 'is malformed (not a function). It is being ignored'
+    try @[type][opts.name] = module(@, opts)
     catch error
       return @error error, { type: type, error: 'initModuleException', opts: opts }
     # pass to skinny.initModel if its in the cfg.layout.models directory
