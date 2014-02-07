@@ -36,6 +36,10 @@ module.exports = (app) ->
 		# A more complex find:
 		# app.models.thing.find { someFilter: 'foobar' }, (results) -> console.log results
 
+		# Because models can be instantiated before mongo is ready, the raw collection object is now a function
+		# on the model which returns the collection - example:
+		# app.models.thing.collection().find()
+
 		# It's important to note that your model functionality lives in both places (the model Class, and the model Instance).
 		# For example: app.models.thing.someFunctionality() runs as expected
 		# (assuming the function doesn't rely on some data thats ONLY in the database) but also:

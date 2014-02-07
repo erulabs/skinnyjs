@@ -21,14 +21,14 @@ module.exports = class Skinnyjs
     # Prepend directory structure values with our cfg.path (ie: build the full filesystem path to any given file)
     @cfg.layout[key] = @path.normalize(@cfg.path + @cfg.layout[key]) for key, value of @cfg.layout
     # Skinny module list (must corespond to directory names)
-    @cfg.moduleTypes = [ 'configs', 'controllers', 'models' ]
+    @cfg.moduleTypes = [ 'configs', 'models', 'controllers' ]
     # Some console colors and initial data structures
     @clr = { red: "\u001b[31m", blue: "\u001b[34m", green: "\u001b[32m", cyan: "\u001b[36m", reset: "\u001b[0m" }
     @db = false; @controllers = {}; @models = {}; @routes = {}; @configs = {}; @compiler = {}; @cache = {};
   # MongoDB functionality - wrap an object with mongo functionality and return the modified object.
   initModel: (model, name) ->
-    # Do not extend non-functions - leave them alone
-    if typeof model.prototype == undefined then return model else skinny = @
+    # FYI, this method can and will be called before mongodb is ready. Therefore do not call @db directly
+    if model isnt undefined and typeof model.prototype isnt undefined then skinny = @ else return model
     # Give each model .find, .new, .remove, etc which is a loose wrapper around the mongo collection
     if !model.find? then model.find = (query, cb) ->
       if typeof query == 'function' then cb = query ; query = {}
@@ -44,7 +44,7 @@ module.exports = class Skinnyjs
       if typeof query == 'function' then cb = query ; query = {}
       skinny.db.collection(name).remove query, () -> if cb? then cb()
     # Add a direct reference to the collection here as well.
-    if !model.collection? then model.collection = @db.collection(name)
+    if !model.collection? then model.collection = () => return @db.collection(name)
     return model
   # Generic module loader - loads js modules with the npm "modules.exports =" pattern from the skinny.init()
   # type matches one of skinny.cfg.layout[] ie: configs, controllers, models...
@@ -61,28 +61,24 @@ module.exports = class Skinnyjs
     opts.name = if opts.name? then opts.name else opts.path.split(@path.sep).splice(-1)[0].replace '.js', ''
     # optionally clear the cache and module list
     if opts.force? then delete require.cache[require.resolve opts.path] ; delete @[type][opts.name]
-    module = require @path.normalize opts.path
+    try module = require @path.normalize opts.path
+    catch error
+      return @error error, { type: type, error: 'moduleRequireException', details: opts }
     if typeof module != 'function' then return console.log @clr.red+"WARNING:"+@clr.reset, 'the', type.substr(0, type.length-1), '"'+opts.name+'"', 'is malformed (not a function). It is being ignored'
     try @[type][opts.name] = module(@, opts)
     catch error
-      return @error error, { type: type, error: 'initModuleException', opts: opts }
+      return @error error, { type: type, error: 'moduleExecutionException', details: opts }
     # pass to skinny.initModel if its in the cfg.layout.models directory
     @[type][opts.name] = @initModel @[type][opts.name], opts.name if type == "models"
     return true
   # Log error via socket:
   error: (error, opts) ->
     @io.sockets.emit '__skinnyjs', { error: { message: error.message, raw: error.toString(), module: opts } }
-    console.log @clr.red+'Exception! ->', "\n"+@clr.cyan+"Skinny details:"+@clr.reset, opts, "\n"+@clr.cyan+"stack:"+@clr.reset, error.stack
+    console.log @clr.red+'Exception: '+opts.error+@clr.reset, 'in', (if opts.details.name? then '"'+opts.details.name+'"' else opts), opts.type.substr(0, opts.type.length-1), "\n"+@clr.cyan+"stack:"+@clr.reset, error.stack
   # Skinny project init / server - takes no arguments
   init: (cb) ->
     # Express JS defaults and listen()
     @express = require 'express' ; @server = @express()
-    @server.use @express.json()
-    @server.use @express.compress()
-    @server.use '/views', @express.static @cfg.layout.views
-    @server.use '/assets', @express.static @cfg.layout.assets
-    @httpd = require('http').createServer @server
-    @httpd.listen @cfg.port
     # Socketio init and listen()
     @io = require('socket.io').listen @httpd, { log: no }
     # MongoDB init and connect() -> defines @db
@@ -90,11 +86,17 @@ module.exports = class Skinnyjs
     @mongo.MongoClient.connect 'mongodb://'+@cfg.db+'/'+@cfg.project, (err, db) =>
       if err then return console.log @clr.red+'MongoDB error:'+@clr.reset, err else @db = db
       # Read each modules directories and for each file in the directory, skinny.initModule(file) with the correct type and file path
-      for moduleType in @cfg.moduleTypes
-        @fs.readdirSync(@cfg.layout[moduleType]).forEach (path) => if @fileMatch path then @initModule moduleType, { path: @cfg.layout[moduleType]+@path.sep+path }
-      # Delay application init 100 ms - prevents the need for complex ordering - gives time for modules to load
-      setTimeout () -> if cb? then cb(),
-      50
+    for moduleType in @cfg.moduleTypes
+      @fs.readdirSync(@cfg.layout[moduleType]).forEach (path) => if @fileMatch path then @initModule moduleType, { path: @cfg.layout[moduleType]+@path.sep+path }
+    # Delay application init 50 ms - prevents the need for complex ordering - gives time for modules to load
+    # TODO: Think about this
+    if cb? then cb()
+    @server.use @express.json()
+    @server.use @express.compress()
+    @server.use '/views', @express.static @cfg.layout.views
+    @server.use '/assets', @express.static @cfg.layout.assets
+    @httpd = require('http').createServer @server
+    @httpd.listen @cfg.port
     # Our socket.io powered quick-reload -> depends on node-watch for cross-platform functionality
     # fires @fileChangeEvent on file changes in the 'watched' directories
     if @cfg.reload
