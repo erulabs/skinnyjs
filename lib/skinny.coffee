@@ -138,10 +138,12 @@ module.exports = class Skinnyjs
             @error(error, { error: 'controllerException', view: res.view })
           if controllerOutput?
             # If the controller sent headers, stop all activity - the controller is handeling this request
-            return if res.headersSent
+            return false if res.headersSent
             # If the controller returned some data, sent it down the wire:
             controllerOutput = JSON.stringify controllerOutput if typeof controllerOutput == "object"
             return res.send controllerOutput if controllerOutput?
+        # If the catchall sent headers, then do not 404 (or try to render view)
+        return false if res.headersSent
         # We'll cache file paths that exist to avoid running fs calls per request if possible.
         if !@cache[res.view]? then @cache[res.view] = @fs.existsSync res.view
         # If the controller didn't return anything, render the view (assuming it exists)
