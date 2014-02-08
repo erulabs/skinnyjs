@@ -34,11 +34,9 @@ module.exports = class Skinnyjs
       save: (cb) ->
         out = {}
         out._id = @_id if @_id?
-        for k, v of @
-          if typeof v in [ 'string', 'number' ]
-            out[k] = v
+        skinny.db_cleanObject(out)
         try skinny.db.collection(name).save out, () -> if cb? then cb()
-        catch error then return @error error, { type: 'database', error: 'modelSaveException', details: error.message }
+        catch error then return skinny.error error, { type: 'database', error: 'modelSaveException', details: error.message }
       remove: (cb) ->
         unless @_id? then if cb? then cb(); return true
         skinny.db.collection(name).remove { _id: @_id }, () -> if cb? then cb()
@@ -171,3 +169,19 @@ module.exports = class Skinnyjs
         if !@cache[res.view]? then @cache[res.view] = @fs.existsSync res.view
         # If the controller didn't return anything, render the view (assuming it exists)
         if @cache[res.view] then return res.sendfile res.view else res.send '404'
+  db_cleanObject: (object) ->
+    for k, v of object
+      if typeof object[k] is 'function'
+        delete object[k]
+      else if object[k] instanceof Array
+        db_cleanArray(object[k])
+      else if typeof object[k] is 'object'
+        db_cleanObject(object[k])
+  db_cleanArray: (array) ->
+    for v in array
+      if typeof v is 'function'
+        delete array[_i]
+      else if object[k] instanceof Array
+        db_cleanArray(object[k])
+      else if typeof object[k] is 'object'
+        db_cleanObject(object[k])
