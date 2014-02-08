@@ -74,7 +74,7 @@ module.exports = class Skinnyjs
   # Log error via socket:
   error: (error, opts) ->
     @io.sockets.emit '__skinnyjs', { error: { message: error.message, raw: error.toString(), module: opts } }
-    console.log @clr.red+'Exception: '+opts.error+@clr.reset, 'in', (if opts.details.name? then '"'+opts.details.name+'"' else opts), opts.type.substr(0, opts.type.length-1), "\n"+@clr.cyan+"stack:"+@clr.reset, error.stack
+    console.log @clr.red+'Exception: '+opts.error+@clr.reset, 'in', (if opts.details.name? then '"'+opts.details.name+'"' else opts), opts.type, "\n"+@clr.cyan+"stack:"+@clr.reset, error.stack
   # Skinny project init / server - takes no arguments
   init: (cb) ->
     # Express JS defaults and listen()
@@ -92,9 +92,13 @@ module.exports = class Skinnyjs
     @server.use '/views', @express.static @cfg.layout.views
     @server.use '/assets', @express.static @cfg.layout.assets
     @httpd = require('http').createServer @server
-    @httpd.listen @cfg.port
+    try @httpd.listen @cfg.port, () => console.log '-->', @clr.green+'Listening on port:'+@clr.reset, @cfg.port
+    catch error
+      return @error error, { type: 'skinnyCore', error: 'httpListenException' }
     # Socketio init and listen()
-    @io = require('socket.io').listen @httpd, { log: no }
+    try @io = require('socket.io').listen @httpd, { log: no }
+    catch error
+      return @error error, { type: 'skinnyCore', error: 'socketioListenException' }
     # Our socket.io powered quick-reload -> depends on node-watch for cross-platform functionality
     # fires @fileChangeEvent on file changes in the 'watched' directories
     if @cfg.reload
