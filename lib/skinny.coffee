@@ -79,17 +79,13 @@ module.exports = class Skinnyjs
   init: (cb) ->
     # Express JS defaults and listen()
     @express = require 'express' ; @server = @express()
-    # Socketio init and listen()
-    @io = require('socket.io').listen @httpd, { log: no }
     # MongoDB init and connect() -> defines @db
     @mongo = require 'mongodb'
-    @mongo.MongoClient.connect 'mongodb://'+@cfg.db+'/'+@cfg.project, (err, db) =>
-      if err then return console.log @clr.red+'MongoDB error:'+@clr.reset, err else @db = db
-      # Read each modules directories and for each file in the directory, skinny.initModule(file) with the correct type and file path
+    @mongo.MongoClient.connect 'mongodb://'+@cfg.db+'/'+@cfg.project, (err, db) => if err then return console.log @clr.red+'MongoDB error:'+@clr.reset, err else @db = db
+    # Read each modules directories and for each file in the directory, skinny.initModule(file) with the correct type and file path
     for moduleType in @cfg.moduleTypes
       @fs.readdirSync(@cfg.layout[moduleType]).forEach (path) => if @fileMatch path then @initModule moduleType, { path: @cfg.layout[moduleType]+@path.sep+path }
-    # Delay application init 50 ms - prevents the need for complex ordering - gives time for modules to load
-    # TODO: Think about this
+    # Run skinny init before HTTP listening - this allows the user to override any @server settings they want
     if cb? then cb()
     @server.use @express.json()
     @server.use @express.compress()
@@ -97,6 +93,8 @@ module.exports = class Skinnyjs
     @server.use '/assets', @express.static @cfg.layout.assets
     @httpd = require('http').createServer @server
     @httpd.listen @cfg.port
+    # Socketio init and listen()
+    @io = require('socket.io').listen @httpd, { log: no }
     # Our socket.io powered quick-reload -> depends on node-watch for cross-platform functionality
     # fires @fileChangeEvent on file changes in the 'watched' directories
     if @cfg.reload
