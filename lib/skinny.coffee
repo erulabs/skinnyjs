@@ -45,14 +45,17 @@ module.exports = class Skinnyjs
           if typeof v isnt "function"
             unless k in [ 'prototype', '__super__' ]
               out[k] = v
+        if skinny.cfg.env is 'test' then return cb()
         try skinny.db.collection(name).save out, () -> if cb? then cb()
         catch error then return skinny.error error, { type: 'database', error: 'modelSaveException', details: error.message }
       remove: (cb) ->
         if !@_id? then if cb? then cb(); return true
+        if skinny.cfg.env is 'test' then return cb()
         skinny.db.collection(name).remove { _id: @_id }, () -> if cb? then cb()
     # Give each model .find, .new, .remove, etc which is a loose wrapper around the mongo collection
     if !model.find? then model.find = (query, cb) ->
       if typeof query == 'function' then cb = query ; query = {}
+      if skinny.cfg.env is 'test' then return cb([ {} ])
       skinny.db.collection(name).find(query).toArray (err, results) =>
         for instance in results
           instance = bind(instance)
@@ -61,6 +64,7 @@ module.exports = class Skinnyjs
     if !model.remove? then model.remove = (query, cb) ->
       if typeof query == 'function' then cb = query ; query = {}
       if cb == undefined then cb = () -> return true
+      if skinny.cfg.env is 'test' then return cb()
       skinny.db.collection(name).remove query, cb
     if !model.collection? then model.collection = () => return @db.collection(name)
     return model
