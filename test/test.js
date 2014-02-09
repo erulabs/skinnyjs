@@ -13,7 +13,7 @@
   rimraf = require('rimraf');
 
   if (path.sep === '/') {
-    skinnyjs = require('skinnyjs');
+    skinnyjs = require(__dirname + '/../lib/skinny.js');
   } else {
     skinnyjs = require('c:\\Users\\eru\\Documents\\GitHub\\skinnyjs\\lib\\skinny.js');
   }

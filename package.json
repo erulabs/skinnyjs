@@ -3,7 +3,7 @@
   "description": "small simple and smart fullstack nodejs framework",
   "author": "Seandon Mooy",
   "email": "seandon.mooy@gmail.com",
-  "version": "0.0.2",
+  "version": "0.0.22",
   "bin": {
     "skinny": "./bin/skinny.js"
   },

@@ -18,7 +18,7 @@ module.exports = class Skinnyjs
     # Project name is the name of this directory by default
     @cfg.project = @cfg.path.split(@path.sep).splice(-1)[0] unless @cfg.project?
     # Directory structure - existing values are required.
-    @cfg.layout = { app: '/app', configs: '/configs', models: '/app/models', views: '/app/views', controllers: '/app/controllers', assets: '/app/client' } unless @cfg.layout?
+    @cfg.layout = { app: '/app', configs: '/configs', test: '/test', models: '/app/models', views: '/app/views', controllers: '/app/controllers', assets: '/app/client' } unless @cfg.layout?
     # Prepend directory structure values with our cfg.path (ie: build the full filesystem path to any given file)
     @cfg.layout[key] = @path.normalize(@cfg.path + @cfg.layout[key]) for key, value of @cfg.layout
     # Skinny module list (must corespond to directory names)
@@ -130,8 +130,8 @@ module.exports = class Skinnyjs
     # fires @fileChangeEvent on file changes in the 'watched' directories
     if @cfg.reload
       @watch = require 'node-watch'
-      @watch @cfg.layout.app, (file) => @fileChangeEvent(file)
-      @watch @cfg.layout.configs, (file) => @fileChangeEvent(file)
+      for watched in [ 'app', 'configs', 'test' ]
+        @watch @cfg.layout[watched], (file) => @fileChangeEvent(file)
   # Matches file paths that skinny uses
   fileMatch: (file) -> if file.match /\/\.git|\.swp$|\.tmp$/ then return false else return true
   # Reload the page and compile code if required - skinny watches files and does stuff!
@@ -141,7 +141,6 @@ module.exports = class Skinnyjs
         # Ignore changes to directories - this only occurs on win32
         if @fs.lstatSync(file).isDirectory() then return false
         # Pass the file to a @compiler if one matches the file extname
-        console.log 'compilter path:', @compiler
         if compile = @compiler[@path.extname file] then return compile file
       else delete @cache[file] if @cache[file]?
       # Load the file! Force a reload of it if it exists already and send a refresh signal to the browser and console
