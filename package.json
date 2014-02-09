@@ -1,9 +1,9 @@
 {
-	"name": "skinny.js",
+	"name": "skinnyjs",
 	"description": "small simple and smart fullstack nodejs framework",
 	"author": "Seandon Mooy",
 	"email": "seandon.mooy@gmail.com",
-	"version": "0.2.403",
+	"version": "0.0.1",
 	"bin": {
 		"skinny": "./bin/skinny.js"
 	},
