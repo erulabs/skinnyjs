@@ -1,0 +1,26 @@
+0 info it worked if it ends with ok
+1 verbose cli [ 'node', '/usr/local/bin/npm', 'publish' ]
+2 info using npm@1.2.32
+3 info using node@v0.10.12
+4 verbose publish [ '.' ]
+5 verbose read json /Users/sean6011/projects/skinnyjs/package.json
+6 error Error: invalid version: 0.0.2.1
+6 error     at Object.module.exports.fixVersionField (/usr/local/lib/node_modules/npm/node_modules/read-package-json/node_modules/normalize-package-data/lib/fixer.js:84:13)
+6 error     at /usr/local/lib/node_modules/npm/node_modules/read-package-json/node_modules/normalize-package-data/lib/normalize.js:28:38
+6 error     at Array.forEach (native)
+6 error     at normalize (/usr/local/lib/node_modules/npm/node_modules/read-package-json/node_modules/normalize-package-data/lib/normalize.js:27:15)
+6 error     at final (/usr/local/lib/node_modules/npm/node_modules/read-package-json/read-json.js:304:33)
+6 error     at then (/usr/local/lib/node_modules/npm/node_modules/read-package-json/read-json.js:118:48)
+6 error     at /usr/local/lib/node_modules/npm/node_modules/read-package-json/read-json.js:293:40
+6 error     at fs.js:266:14
+6 error     at Object.oncomplete (fs.js:107:15)
+7 error If you need help, you may report this log at:
+7 error     <http://github.com/isaacs/npm/issues>
+7 error or email it to:
+7 error     <npm-@googlegroups.com>
+8 error System Darwin 11.4.2
+9 error command "node" "/usr/local/bin/npm" "publish"
+10 error cwd /Users/sean6011/projects/skinnyjs
+11 error node -v v0.10.12
+12 error npm -v 1.2.32
+13 verbose exit [ 1, true ]
