@@ -14,7 +14,7 @@ Featuring:
 
 ## Install
 
-    sudo npm install -g skinny.js
+    sudo npm install -g skinnyjs
 
 Make a new project and install skinny.js as a dep (an example package.json is provided):
 
