@@ -71,10 +71,10 @@ module.exports = class Skinnyjs
     # Returning true passes task to reloader - returning false refuses reload
     # if this isn't javascript or if its a client-side file, we're not interested, so move on.
     if !opts.path? then return false else @path.normalize opts.path
-    isntJavascript = !!!opts.path.match /\.js$/,
-    isAssets = !!!opts.path.indexOf @path.sep+'assets'+@path.sep
-    isClient = !!!opts.path.indexOf @path.sep+'client'+@path.sep
-    if isntJavascript or isAssets and isClient then return true
+    isntJavascript = !!!opts.path.match /\.js$/
+    isClient = !!opts.path.match /\/client\//
+    if isntJavascript or isClient then return true
+    if !!opts.path.match /\/test\/*.js$/ then return false
     # If this is not a known module type then do not reload page - instead log a message - TODO: auto-restart skinny
     if type not in @cfg.moduleTypes then @log @clr.cyan+'Unhandled change on:'+@clr.reset, opts.path, @clr.cyan+"you may want to restart Skinny"+@clr.reset ; return false
     # Add the module to skinny - module name is opts.name or the name of the .js file that is loaded
