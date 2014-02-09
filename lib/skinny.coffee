@@ -30,6 +30,14 @@ module.exports = class Skinnyjs
   initModel: (model, name) ->
     # FYI, this method can and will be called before mongodb is ready. Therefore do not call @db directly
     if model isnt undefined then skinny = @ else return model
+    bind = (instance) ->
+      instance.save = protoInstance.save
+      instance.remove = protoInstance.remove
+      for methodName, method of model
+        if model.hasOwnProperty(methodName) 
+          unless methodName in [ 'find', 'new', 'remove', 'collection', 'prototype', '__super__' ]
+            instance[methodName] = method
+      return instance
     protoInstance = 
       save: (cb) ->
         out = { _id: @_id }
@@ -47,12 +55,9 @@ module.exports = class Skinnyjs
       if typeof query == 'function' then cb = query ; query = {}
       skinny.db.collection(name).find(query).toArray (err, results) =>
         for instance in results
-          for methodName, method of model
-            unless model.hasOwnProperty(methodName) and methodName not in [ 'find', 'new', 'remove', 'collection' ]
-              instance[methodName] = method
-          instance extends protoInstance
+          instance = bind(instance)
         cb results
-    if !model.new? then model.new = () -> model extends protoInstance; return model
+    if !model.new? then model.new = () -> return bind({})
     if !model.remove? then model.remove = (query, cb) ->
       if typeof query == 'function' then cb = query ; query = {}
       if cb == undefined then cb = () -> return true
