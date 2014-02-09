@@ -1,6 +1,6 @@
-Skinny.js 0.0.3
+Skinny.js [![Build Status](https://travis-ci.org/erulabs/skinnyjs.png?branch=master)](https://travis-ci.org/erulabs/skinnyjs)
 =======
-__A very smart, very fast, and very simple 'fullstack' NodeJS framework__.
+__A very smart, very fast, and very simple 'fullstack' NodeJS framework__. 
 
 by Seandon 'Eru' Mooy -> admin@erulabs.com -> https://github.com/erulabs
 
