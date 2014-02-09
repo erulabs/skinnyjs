@@ -1,4 +1,4 @@
-Skinny.js
+Skinny.js 0.0.3
 =======
 __A very small, very fast, and very simple 'fullstack' NodeJS framework__.
 
