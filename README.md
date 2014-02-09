@@ -1,16 +1,17 @@
-Skinny.js
+Skinny.js 0.0.3
 =======
-__A very small, very fast, and very simple 'fullstack' NodeJS framework__.
+__A very smart, very fast, and very simple 'fullstack' NodeJS framework__.
 
 by Seandon 'Eru' Mooy -> admin@erulabs.com -> https://github.com/erulabs
 
 Featuring:
 
-1. Very fast live reload via bundled socket.io
-2. A simple and familiar route -> controller -> model -> view setup - if you've used an MVC framework before you'll wonder why they are tens of thousands of lines of code.
+1. Very fast live reload for browsers and servers (with no plugin!)
+2. A familiar router and MVC - You'll wonder why other MVCs are tens of thousands of lines of code.
 3. Coffee-script and Sass built right in, but not required whatsoever. Check configs/compiler.js in your skinny app!
-4. A MongoDB wrapper that will make you wonder why most NodeJS framworks are thousands of lines of code
-5. Basically nothing else!
+4. A MongoDB wrapper that can't possible be so simple and yet work so well
+5. No imposed philosophy, no massive gruntfiles, no async/sync rules or religions
+6. Basically nothing else!
 
 ## Install
 
