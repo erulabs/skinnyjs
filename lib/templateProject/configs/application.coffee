@@ -1,2 +1,2 @@
 module.exports = (app) ->
-	console.log 'Write your startup code / helpers to application.coffee - or any file in /configs/!'
+	app.log 'Write your startup code / helpers to application.coffee - or any file in /configs/!'

@@ -1,36 +1,41 @@
 {
-	"name": "skinnyjs",
-	"description": "small simple and smart fullstack nodejs framework",
-	"author": "Seandon Mooy",
-	"email": "seandon.mooy@gmail.com",
-	"version": "0.0.2",
-	"bin": {
-		"skinny": "./bin/skinny.js"
-	},
-	"main": "./lib/skinny.js",
-	"keywords": [
-		"micromvc",
-		"skinny.js",
-		"eruslab",
-		"gamelab"
-	],
-	"dependencies": {
-		"node-watch": "latest",
-		"mongodb": "latest",
-		"express": "latest",
-		"socket.io": "latest",
-		"coffee-script": "latest",
-		"underscore": "latest",
-		"node-sass": "latest",
-		"ncp": "latest",
-		"commander": "latest"
-	},
-	"engines": {
-		"node": ">=0.10"
-	},
-	"homepage": "https://github.com/erulabs/skinnyjs",
-	"repository": {
-		"type": "git",
-		"url": "git@github.com:erulabs/skinnyjs.git"
-	}
+  "name": "skinnyjs",
+  "description": "small simple and smart fullstack nodejs framework",
+  "author": "Seandon Mooy",
+  "email": "seandon.mooy@gmail.com",
+  "version": "0.0.2",
+  "bin": {
+    "skinny": "./bin/skinny.js"
+  },
+  "main": "./lib/skinny.js",
+  "keywords": [
+    "micromvc",
+    "skinny.js",
+    "eruslab",
+    "gamelab"
+  ],
+  "dependencies": {
+    "node-watch": "latest",
+    "mongodb": "latest",
+    "express": "latest",
+    "socket.io": "latest",
+    "coffee-script": "latest",
+    "underscore": "latest",
+    "node-sass": "latest",
+    "ncp": "latest",
+    "commander": "latest"
+  },
+  "engines": {
+    "node": ">=0.10"
+  },
+  "homepage": "https://github.com/erulabs/skinnyjs",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:erulabs/skinnyjs.git"
+  },
+  "devDependencies": {
+    "should": "~3.1.2",
+    "mocha": "latest",
+    "rimraf": "latest"
+  }
 }

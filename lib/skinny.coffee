@@ -7,7 +7,7 @@ module.exports = class Skinnyjs
     @fs = require 'fs'
     @cfg = {} if !@cfg?
     # Configuration defaults
-    @cfg.env = 'dev'
+    @cfg.env = 'dev' if !@cfg.env?
     @cfg.port = 9000 unless @cfg.port?
     # Autoreload - boolean
     @cfg.reload = true unless @cfg.reload?
@@ -69,9 +69,12 @@ module.exports = class Skinnyjs
   # options is an array which must have .path - .force can be passed to reload a library.
   initModule: (type, opts) ->
     # Returning true passes task to reloader - returning false refuses reload
-    if !opts.path? then return false else @path.normalize opts.path
     # if this isn't javascript or if its a client-side file, we're not interested, so move on.
-    unless opts.path.match /\.js$/ and opts.path.indexOf @path.sep+'assets'+@path.sep isnt "-1" and opts.path.indexOf @path.sep+'client'+@path.sep isnt "-1" then return true
+    if !opts.path? then return false else @path.normalize opts.path
+    isntJavascript = !!!opts.path.match /\.js$/,
+    isAssets = !!!opts.path.indexOf @path.sep+'assets'+@path.sep
+    isClient = !!!opts.path.indexOf @path.sep+'client'+@path.sep
+    if isntJavascript or isAssets and isClient then return true
     # If this is not a known module type then do not reload page - instead log a message - TODO: auto-restart skinny
     if type not in @cfg.moduleTypes then @log @clr.cyan+'Unhandled change on:'+@clr.reset, opts.path, @clr.cyan+"you may want to restart Skinny"+@clr.reset ; return false
     # Add the module to skinny - module name is opts.name or the name of the .js file that is loaded
@@ -91,10 +94,10 @@ module.exports = class Skinnyjs
     else @[type][opts.name] = module(@, opts)
     return true
   # Default logger
-  log: () -> console.log.apply @, arguments
+  log: () -> if @cfg.env is 'dev' then console.log.apply @, arguments
   # Log error via socket:
   error: (error, opts) ->
-    if @cfg.env is 'dev' then @io.sockets.emit '__skinnyjs', { error: { message: error.message, raw: error.toString(), module: opts } }
+    if @cfg.env is 'dev' and @io? then @io.sockets.emit '__skinnyjs', { error: { message: error.message, raw: error.toString(), module: opts } }
     @log @clr.red+'Exception: '+opts.error+@clr.reset, 'in', (if opts.details? and opts.details.name? then '"'+opts.details.name+'":' else opts), error.toString()
     if error.stack? then @log "\n"+@clr.cyan+"stack:"+@clr.reset, error.stack
     if opts.details? then @log @clr.cyan+"the Skinny:"+@clr.reset, opts.details
@@ -138,6 +141,7 @@ module.exports = class Skinnyjs
         # Ignore changes to directories - this only occurs on win32
         if @fs.lstatSync(file).isDirectory() then return false
         # Pass the file to a @compiler if one matches the file extname
+        console.log 'compilter path:', @compiler
         if compile = @compiler[@path.extname file] then return compile file
       else delete @cache[file] if @cache[file]?
       # Load the file! Force a reload of it if it exists already and send a refresh signal to the browser and console
@@ -145,11 +149,13 @@ module.exports = class Skinnyjs
         @log '-->', @clr.green+'Reloading browser'+@clr.reset, '-', file.replace(@cfg.path, '')
         @io.sockets.emit('__skinnyjs', { reload: { delay: 0 } })
   # Create a new SkinnyJS project template - copies skinnyjs templates into skinny.cfg.path/
-  install: (target) ->
+  install: (target, cb) ->
     target = @cfg.path+dirName unless target?
     @fs.mkdirSync target unless @fs.existsSync target
     # Recursively copy the template project into our target
-    require('ncp').ncp __dirname+'/templateProject', target, (err) -> @log err if err
+    require('ncp').ncp __dirname+'/templateProject', target, (err) ->
+      @log err if err
+      if cb? then cb()
   # Parses app.routes and adds them to express
   parseRoutes: () ->
     @_.each @routes, (obj, route) =>
