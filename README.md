@@ -59,7 +59,7 @@ Create a new project:
 
 Modify the project to use your development version of skinny:
 
-in 'myawesomeProject/app/server.js' change `skinnyjs = require('skinny.js')` to something like:
+in 'myawesomeProject/app/server.js' change `skinnyjs = require('skinnyjs')` to something like:
 
     skinnyjs = require('../../skinnyjs/lib/skinny.js')
 
