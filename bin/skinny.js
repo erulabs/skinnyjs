@@ -12,8 +12,8 @@ cmd
 	.parse(process.argv);
 
 if (cmd['new']) {
-	var SkinnyJs 	= require(lib + '/skinny.js');
-	var instance 	= new SkinnyJs();
+	var SkinnyJs = require(lib + '/skinny.js');
+	var instance = new SkinnyJs();
 	instance.install(cmd['new']);
 } else if (cmd['server']) {
 	require(fs.realpathSync('./app/server.js'));
