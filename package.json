@@ -40,5 +40,8 @@
   },
   "optionalDependencies": {
     "test": "make test-all"
+  },
+  "script": {
+    "test": "make test-all"
   }
 }
