@@ -75,8 +75,9 @@ However, if the value of `require(modulePath)` is a function, Skinny will call i
 
     modules.export = (skinny) ->
       # some code here
+      return { someObject: true }
 
-Files loaded from the 'models' directory are further modified with features connecting them to a MongoDB database, while files loaded from the 'controllers' directory are targeted by 'config/routes.js'. Even that file isn't required, infact, you can easily delete that directory setup and modify your layout in app/server.js.
+Objects loaded from files in the 'models' directory are further modified with features connecting them to a MongoDB database, while objects loaded from the 'controllers' directory are targeted by 'config/routes.js'. Even that file isn't required, infact, you can easily delete that directory setup and modify your layout in app/server.js.
 
 As for the client side, I'm not sure I plan on adding anything but the simple socket.io setup by default. Angular is there along with bootstrap because that's what I end up using for every project :P Skinny is going to stay lean and I'd like that it not lose sight of front-end designers or learners who don't want a ton of prepackaged nonsense. If you think you have ultra lightweight ways of making the front-end js kickass, please share! :D
 
