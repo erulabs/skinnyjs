@@ -29,16 +29,18 @@ module.exports = class Skinnyjs
   # MongoDB functionality - wrap an object with mongo functionality and return the modified object.
   initModel: (model, name) ->
     # FYI, this method can and will be called before mongodb is ready. Therefore do not call @db directly
-    if model isnt undefined and typeof model.prototype isnt undefined then skinny = @ else return model
+    if model isnt undefined then skinny = @ else return model
     protoInstance = 
       save: (cb) ->
-        out = {}
-        out._id = @_id if @_id?
-        skinny.db_cleanObject(out)
+        out = { _id: @_id }
+        for k, v of @
+          if typeof v isnt "function"
+            unless k in [ 'prototype', '__super__' ]
+              out[k] = v
         try skinny.db.collection(name).save out, () -> if cb? then cb()
         catch error then return skinny.error error, { type: 'database', error: 'modelSaveException', details: error.message }
       remove: (cb) ->
-        unless @_id? then if cb? then cb(); return true
+        if !@_id? then if cb? then cb(); return true
         skinny.db.collection(name).remove { _id: @_id }, () -> if cb? then cb()
     # Give each model .find, .new, .remove, etc which is a loose wrapper around the mongo collection
     if !model.find? then model.find = (query, cb) ->
@@ -89,7 +91,9 @@ module.exports = class Skinnyjs
   # Log error via socket:
   error: (error, opts) ->
     if @cfg.env is 'dev' then @io.sockets.emit '__skinnyjs', { error: { message: error.message, raw: error.toString(), module: opts } }
-    @log @clr.red+'Exception: '+opts.error+@clr.reset, 'in', (if opts.details? and opts.details.name? then '"'+opts.details.name+'"' else opts), opts.type, "\n"+@clr.cyan+"stack:"+@clr.reset, error.stack
+    @log @clr.red+'Exception: '+opts.error+@clr.reset, 'in', (if opts.details? and opts.details.name? then '"'+opts.details.name+'":' else opts), error.toString()
+    if error.stack? then @log "\n"+@clr.cyan+"stack:"+@clr.reset, error.stack
+    if opts.details? then @log @clr.cyan+"the Skinny:"+@clr.reset, opts.details
   # Skinny project init / server - takes no arguments
   init: (cb) ->
     # Express JS defaults and listen()
@@ -156,8 +160,10 @@ module.exports = class Skinnyjs
         # Run controller if it exists
         if @controllers[obj.controller]? and @controllers[obj.controller][obj.action]?
           try controllerOutput = @controllers[obj.controller][obj.action](req, res)
-          catch error then @error(error, { error: 'controllerException', view: res.view })
+          catch error then @error error, { error: 'controllerException', details: { name: obj.controller, action: obj.controller } }
           if controllerOutput?
+            # Allow a manual bypass
+            if controllerOutput.skip? then return false
             # If the controller sent headers, stop all activity - the controller is handeling this request
             return false if res.headersSent
             # If the controller returned some data, sent it down the wire:
@@ -169,19 +175,3 @@ module.exports = class Skinnyjs
         if !@cache[res.view]? then @cache[res.view] = @fs.existsSync res.view
         # If the controller didn't return anything, render the view (assuming it exists)
         if @cache[res.view] then return res.sendfile res.view else res.send '404'
-  db_cleanObject: (object) ->
-    for k, v of object
-      if typeof object[k] is 'function'
-        delete object[k]
-      else if object[k] instanceof Array
-        db_cleanArray(object[k])
-      else if typeof object[k] is 'object'
-        db_cleanObject(object[k])
-  db_cleanArray: (array) ->
-    for v in array
-      if typeof v is 'function'
-        delete array[_i]
-      else if object[k] instanceof Array
-        db_cleanArray(object[k])
-      else if typeof object[k] is 'object'
-        db_cleanObject(object[k])
