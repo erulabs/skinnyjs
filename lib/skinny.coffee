@@ -150,6 +150,8 @@ module.exports = class Skinnyjs
         @io.sockets.emit('__skinnyjs', { reload: { delay: 0 } })
   # Create a new SkinnyJS project template - copies skinnyjs templates into skinny.cfg.path/
   install: (target, cb) ->
+    # TODO: This should parse and modify the new projects package.json
+    # setting the skinnyjs dep to the version which created it
     target = @cfg.path+dirName unless target?
     @fs.mkdirSync target unless @fs.existsSync target
     # Recursively copy the template project into our target
