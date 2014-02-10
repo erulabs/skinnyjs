@@ -8,8 +8,8 @@ Featuring:
 
 1. Very fast live reload for browsers and servers (with no plugin!)
 2. A familiar router and MVC - You'll wonder why other MVCs are tens of thousands of lines of code.
-3. Coffee-script and Sass built right in, but not required whatsoever. Check configs/compiler.js in your skinny app!
-4. A MongoDB wrapper that can't possible be so simple and yet work so well
+3. Coffee-script and Sass built right in, but not required whatsoever. Check configs/compiler.js!
+4. A MongoDB wrapper that can't possibly be so simple and yet work so well
 5. No imposed philosophy, no massive gruntfiles, no async/sync rules or religions
 6. Basically nothing else!
 
