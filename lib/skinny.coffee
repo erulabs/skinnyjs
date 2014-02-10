@@ -18,7 +18,14 @@ module.exports = class Skinnyjs
     # Project name is the name of this directory by default
     @cfg.project = @cfg.path.split(@path.sep).splice(-1)[0] unless @cfg.project?
     # Directory structure - existing values are required.
-    @cfg.layout = { app: '/app', configs: '/configs', test: '/test', models: '/app/models', views: '/app/views', controllers: '/app/controllers', assets: '/app/client' } unless @cfg.layout?
+    if !@cfg.layout? then @cfg.layout = 
+      app: '/app'
+      configs: '/configs'
+      test: '/test'
+      models: '/app/models'
+      views: '/app/views'
+      controllers: '/app/controllers'
+      assets: '/app/client'
     # Prepend directory structure values with our cfg.path (ie: build the full filesystem path to any given file)
     @cfg.layout[key] = @path.normalize(@cfg.path + @cfg.layout[key]) for key, value of @cfg.layout
     # Skinny module list (must corespond to directory names)
@@ -45,12 +52,10 @@ module.exports = class Skinnyjs
           if typeof v isnt "function"
             unless k in [ 'prototype', '__super__' ]
               out[k] = v
-        if skinny.cfg.env is 'test' then return cb()
         try skinny.db.collection(name).save out, () -> if cb? then cb()
         catch error then return skinny.error error, { type: 'database', error: 'modelSaveException', details: error.message }
       remove: (cb) ->
         if !@_id? then if cb? then cb(); return true
-        if skinny.cfg.env is 'test' then return cb()
         skinny.db.collection(name).remove { _id: @_id }, () -> if cb? then cb()
     # Give each model .find, .new, .remove, etc which is a loose wrapper around the mongo collection
     if !model.find? then model.find = (query, cb) ->
@@ -64,7 +69,6 @@ module.exports = class Skinnyjs
     if !model.remove? then model.remove = (query, cb) ->
       if typeof query == 'function' then cb = query ; query = {}
       if cb == undefined then cb = () -> return true
-      if skinny.cfg.env is 'test' then return cb()
       skinny.db.collection(name).remove query, cb
     if !model.collection? then model.collection = () => return @db.collection(name)
     return model
@@ -153,6 +157,8 @@ module.exports = class Skinnyjs
         @io.sockets.emit('__skinnyjs', { reload: { delay: 0 } })
   # Create a new SkinnyJS project template - copies skinnyjs templates into skinny.cfg.path/
   install: (target, cb) ->
+    # TODO: This should parse and modify the new projects package.json
+    # setting the skinnyjs dep to the version which created it
     target = @cfg.path+dirName unless target?
     @fs.mkdirSync target unless @fs.existsSync target
     # Recursively copy the template project into our target

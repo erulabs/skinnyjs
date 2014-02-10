@@ -3,25 +3,20 @@
   "description": "small simple and smart fullstack nodejs framework",
   "author": "Seandon Mooy",
   "email": "seandon.mooy@gmail.com",
-  "version": "0.0.4",
+  "version": "0.0.41",
   "bin": {
     "skinny": "./bin/skinny.js"
   },
   "main": "./lib/skinny.js",
   "keywords": [
-    "micromvc",
-    "skinny.js",
-    "eruslab",
-    "gamelab"
+    "skinny.js"
   ],
   "dependencies": {
     "node-watch": "latest",
     "mongodb": "latest",
     "express": "latest",
     "socket.io": "latest",
-    "coffee-script": "latest",
     "underscore": "latest",
-    "node-sass": "latest",
     "ncp": "latest",
     "commander": "latest"
   },
