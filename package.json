@@ -9,19 +9,14 @@
   },
   "main": "./lib/skinny.js",
   "keywords": [
-    "micromvc",
-    "skinny.js",
-    "eruslab",
-    "gamelab"
+    "skinny.js"
   ],
   "dependencies": {
     "node-watch": "latest",
     "mongodb": "latest",
     "express": "latest",
     "socket.io": "latest",
-    "coffee-script": "latest",
     "underscore": "latest",
-    "node-sass": "latest",
     "ncp": "latest",
     "commander": "latest"
   },
