@@ -31,7 +31,9 @@
   "devDependencies": {
     "should": "~3.1.2",
     "mocha": "latest",
-    "rimraf": "latest"
+    "rimraf": "latest",
+    "less": "latest",
+    "coffee-script": "latest"
   },
   "optionalDependencies": {
     "test": "make test-all"

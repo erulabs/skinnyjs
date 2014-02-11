@@ -43,7 +43,7 @@ module.exports = class Skinnyjs
       for methodName, method of model
         if model.hasOwnProperty(methodName) 
           unless methodName in [ 'find', 'new', 'remove', 'collection', 'prototype', '__super__' ]
-            instance[methodName] = method
+            if !instance[methodName]? then instance[methodName] = method
       return instance
     protoInstance = 
       save: (cb) ->

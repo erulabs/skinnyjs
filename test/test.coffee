@@ -68,34 +68,35 @@ tests = () ->
 															test.find (results) ->
 																findComplete()
 
-										## PARSE ROUTES
-										describe ".parseRoutes()", () ->
-											it "should save routes without error", (parseRoutesTestComplete) ->
-												app.routes =
-													'/__test': {
-														controller: '__test',
-														action: '__test1'
-													}
-												app.parseRoutes()
-												parseRoutesTestComplete()
+									## PARSE ROUTES
+									describe ".parseRoutes()", () ->
+										it "should save routes without error", (parseRoutesTestComplete) ->
+											app.routes =
+												'/__test': {
+													controller: '__test',
+													action: '__test1'
+												}
+											app.parseRoutes()
+											parseRoutesTestComplete()
 
-										## CONTROLLER CREATION
-										describe "controllers", () ->
-											it "should create without issue", (controllerCreateTest) ->
-												testControllerPath = testdir + path.sep + 'app' + path.sep + 'controllers' + path.sep + '__test.js'
-												testControllerJS = 'modules.export = { "__test1": function() { return "__testData"; } };'
-												fs.writeFileSync testControllerPath, testControllerJS
-												controllerCreateTest()
+									## CONTROLLER CREATION
+									describe "controllers", () ->
+										it "should create without issue", (controllerCreateTest) ->
+											testControllerPath = testdir + path.sep + 'app' + path.sep + 'controllers' + path.sep + '__test.js'
+											testControllerJS = 'modules.export = { "__test1": function() { return "__testData"; } };'
+											fs.writeFileSync testControllerPath, testControllerJS
+											controllerCreateTest()
 
-												#if app.controllers['__test']?
-												#	controllerCreateTest()
-												#else
-												#	throw new Error('controller wanst found');
+									#describe ""
+
+											#if app.controllers['__test']?
+											#	controllerCreateTest()
+											#else
+											#	throw new Error('controller wanst found');
 # cleanup
 after (done) ->
 	rimraf testdir, () ->
 		done()
-
 
 if fs.existsSync testdir
 	throw new Error('test dir exists, exiting')
