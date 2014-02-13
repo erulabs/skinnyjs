@@ -41,8 +41,8 @@
                     app.server.use(app.express.urlencoded());
                     app.server.use('/assets', app.express["static"](app.cfg.layout.assets));
                     initComplete();
-                    return describe("app", function() {
-                      describe(".initModel()", function() {
+                    describe("app", function() {
+                      return describe(".initModel()", function() {
                         return it("should get correct functionality appended", function(initModelComplete) {
                           var test;
                           test = app.initModel({
@@ -81,26 +81,26 @@
                           });
                         });
                       });
-                      describe(".parseRoutes()", function() {
-                        return it("should save routes without error", function(parseRoutesTestComplete) {
-                          app.routes = {
-                            '/__test': {
-                              controller: '__test',
-                              action: '__test1'
-                            }
-                          };
-                          app.parseRoutes();
-                          return parseRoutesTestComplete();
-                        });
+                    });
+                    describe(".parseRoutes()", function() {
+                      return it("should save routes without error", function(parseRoutesTestComplete) {
+                        app.routes = {
+                          '/__test': {
+                            controller: '__test',
+                            action: '__test1'
+                          }
+                        };
+                        app.parseRoutes();
+                        return parseRoutesTestComplete();
                       });
-                      return describe("controllers", function() {
-                        return it("should create without issue", function(controllerCreateTest) {
-                          var testControllerJS, testControllerPath;
-                          testControllerPath = testdir + path.sep + 'app' + path.sep + 'controllers' + path.sep + '__test.js';
-                          testControllerJS = 'modules.export = { "__test1": function() { return "__testData"; } };';
-                          fs.writeFileSync(testControllerPath, testControllerJS);
-                          return controllerCreateTest();
-                        });
+                    });
+                    return describe("controllers", function() {
+                      return it("should create without issue", function(controllerCreateTest) {
+                        var testControllerJS, testControllerPath;
+                        testControllerPath = testdir + path.sep + 'app' + path.sep + 'controllers' + path.sep + '__test.js';
+                        testControllerJS = 'modules.export = { "__test1": function() { return "__testData"; } };';
+                        fs.writeFileSync(testControllerPath, testControllerJS);
+                        return controllerCreateTest();
                       });
                     });
                   });

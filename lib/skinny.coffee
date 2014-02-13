@@ -16,7 +16,7 @@ module.exports = class Skinnyjs
     # Set the project path to our current working directory by default
     @cfg.path = @path.normalize process.cwd() unless @cfg.path?
     # Project name is the name of this directory by default
-    @cfg.project = @cfg.path.split(@path.sep).splice(-1)[0] unless @cfg.project?
+    @cfg.project = @cfg.path.split(@path.sep).splice(-1)[0].replace('.', '') unless @cfg.project?
     # Directory structure - existing values are required.
     if !@cfg.layout? then @cfg.layout = 
       app: '/app'
@@ -43,7 +43,7 @@ module.exports = class Skinnyjs
       for methodName, method of model
         if model.hasOwnProperty(methodName) 
           unless methodName in [ 'find', 'new', 'remove', 'collection', 'prototype', '__super__' ]
-            instance[methodName] = method
+            if !instance[methodName]? then instance[methodName] = method
       return instance
     protoInstance = 
       save: (cb) ->
