@@ -198,7 +198,6 @@ module.exports = class Skinnyjs
             # If the controller returned some data, sent it down the wire:
             controllerOutput = JSON.stringify controllerOutput if typeof controllerOutput == "object"
             if controllerOutput?
-              res.writeHead 200
               return res.send controllerOutput
         # If the catchall sent headers, then do not 404 (or try to render view)
         return false if res.headersSent
@@ -206,8 +205,6 @@ module.exports = class Skinnyjs
         if !@cache[res.view]? then @cache[res.view] = @fs.existsSync res.view
         # If the controller didn't return anything, render the view (assuming it exists)
         if @cache[res.view]
-          res.writeHead 200
           return res.sendfile res.view
         else
-          res.writeHead 404
           res.send '404'
