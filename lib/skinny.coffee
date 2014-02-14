@@ -31,7 +31,7 @@ module.exports = class Skinnyjs
     # Skinny module list (must corespond to directory names)
     @cfg.moduleTypes = [ 'configs', 'models', 'controllers' ]
     # Some console colors and initial data structures
-    @clr = { red: "\u001b[31m", blue: "\u001b[34m", green: "\u001b[32m", cyan: "\u001b[36m", reset: "\u001b[0m" }
+    @clr = { red: "\u001b[31m", blue: "\u001b[34m", green: "\u001b[32m", cyan: "\u001b[36m", gray: "\u001b[1;30m", reset: "\u001b[0m" }
     @db = false; @controllers = {}; @models = {}; @routes = {}; @configs = {}; @compiler = {}; @cache = {};
   # MongoDB functionality - wrap an object with mongo functionality and return the modified object.
   initModel: (model, name) ->
@@ -121,6 +121,11 @@ module.exports = class Skinnyjs
       @fs.readdirSync(@cfg.layout[moduleType]).forEach (path) =>
         if @fileMatch path
           file = @cfg.layout[moduleType] + @path.sep + path
+          # This is a race condition - ie: if no compilers have been loaded (initModule compiler.js)
+          # Then we won't have any compilers loaded! Hence, the template compiler is called
+          # 000_compiler.coffee, because fs.readdir returns files sorted by name.
+          # Of course, this implies 000_compiler.js is read and therefore 000_compiler.coffee is _not_
+          # compiled on boot. That's not horrible though, since the compiler is probably rarely modified.
           if @compiler[@path.extname file]? then return @compiler[@path.extname file](file)
           @initModule moduleType, { path: file }
     # Run skinny init before HTTP listening - this allows the user to override any @server settings they want
@@ -128,6 +133,8 @@ module.exports = class Skinnyjs
     # JSON and Gzip by default
     @server.use @express.json()
     @server.use @express.compress()
+    # Allow parsing of POST and GET arguments by default.
+    @server.use @express.urlencoded()
     # Static asset routes -> this should be improved.
     @server.use '/views', @express.static @cfg.layout.views
     @server.use '/assets', @express.static @cfg.layout.assets
@@ -177,7 +184,7 @@ module.exports = class Skinnyjs
         # Run catchall route if we've found a controller
         @controllers[obj.controller]['*'](req, res) if @controllers[obj.controller]['*']? if @controllers[obj.controller]?
         # Log concise request to console
-        @log '('+req.connection.remoteAddress+')', @clr.cyan+req.method+':'+@clr.reset, req.url, obj.controller+'#'+obj.action
+        @log '('+req.connection.remoteAddress+')', @clr.cyan+req.method+':'+@clr.reset, req.url, @clr.gray+'->'+@clr.reset, obj.controller+@clr.gray+'#'+@clr.reset+obj.action
         # build out filepath for expected view (may or may not exist)
         res.view = @cfg.layout.views+'/'+obj.controller+'/'+obj.action+'.html'
         # Run controller if it exists

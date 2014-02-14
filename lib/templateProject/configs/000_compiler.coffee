@@ -14,34 +14,34 @@ module.exports = (app) ->
     app.compiler['.coffee'] = (file) ->
         # If we dont have the module, print a warning and return.
         try require.resolve 'coffee-script'
-        catch error then return console.log app.clr.cyan+'CoffeeScript:'+app.clr.reset, 'not installed - try npm install "coffee-script"'
+        catch error then return app.log app.clr.cyan+'CoffeeScript:'+app.clr.reset, 'not installed - try npm install "coffee-script"'
         coffee = require 'coffee-script' if !coffee
         app.fs.readFile file, 'utf8', (err, rawCode) =>
-            console.log app.clr.red+'compileAsset() error:'+app.clr.reset, err if err
-            console.log app.clr.cyan+'CoffeeScript:'+app.clr.reset, file.replace(app.cfg.path, '')
+            app.log app.clr.red+'compileAsset() error:'+app.clr.reset, err if err
+            app.log app.clr.cyan+'CoffeeScript:'+app.clr.reset, file.replace(app.cfg.path, '')
             try
                 cs = coffee.compile rawCode
             catch error
-                return console.log app.clr.red+'CoffeeScript error:'+app.clr.reset, file.replace(app.cfg.path, '')+':', error.message, error.description, error
+                return app.log app.clr.red+'CoffeeScript error:'+app.clr.reset, file.replace(app.cfg.path, '')+':', error.message, error.description, error
             unless error?
-                app.fs.writeFile file.replace('.coffee', '.js'), cs, (err) -> console.log app.clr.red+'autocompile write error! file'+app.clr.reset, file.replace('.coffee', '.js'), 'error:', err if err
+                app.fs.writeFile file.replace('.coffee', '.js'), cs, (err) -> app.log app.clr.red+'autocompile write error! file'+app.clr.reset, file.replace('.coffee', '.js'), 'error:', err if err
     
     # Node-Sass compiler
     app.compiler['.scss'] = (file) ->
         try require.resolve 'node-sass'
-        catch error then return console.log app.clr.cyan+'SASS:'+app.clr.reset, 'not installed - try npm install "node-sass"'
+        catch error then return app.log app.clr.cyan+'SASS:'+app.clr.reset, 'not installed - try npm install "node-sass"'
         sass = require 'node-sass' if !sass
-        console.log app.clr.cyan+'SASS:'+app.clr.reset, file.replace(app.cfg.path, '')
+        app.log app.clr.cyan+'SASS:'+app.clr.reset, file.replace(app.cfg.path, '')
         sass.render 
             file: file
-            success: (css) => app.fs.writeFile file.replace('.scss', '.css'), css, (err) -> console.log app.clr.red+'autocompile write error! file'+app.clr.reset, file.replace('.scss', '.css'), 'error:', err if err
-            error: (error) => console.log app.clr.red+'SCSS Compile error:'+app.clr.reset, error
+            success: (css) => app.fs.writeFile file.replace('.scss', '.css'), css, (err) -> app.log app.clr.red+'autocompile write error! file'+app.clr.reset, file.replace('.scss', '.css'), 'error:', err if err
+            error: (error) => app.log app.clr.red+'SCSS Compile error:'+app.clr.reset, error
     
     # LESS compiler: http://lesscss.org
     app.compiler['.less'] = (file) ->
         try require.resolve 'less'
-        catch error then return console.log app.clr.cyan+'LESS:'+app.clr.reset, 'not installed - try npm install "less"'
+        catch error then return app.log app.clr.cyan+'LESS:'+app.clr.reset, 'not installed - try npm install "less"'
         if !less then less = require('less')
-        console.log app.clr.cyan+'LESS:'+app.clr.reset, file.replace(app.cfg.path, '')
+        app.log app.clr.cyan+'LESS:'+app.clr.reset, file.replace(app.cfg.path, '')
         less.render app.fs.readFileSync(file, 'utf8'), (err, css) ->
-            app.fs.writeFile file.replace('.less', '.css'), css, (err) -> console.log app.clr.red+'autocompile write error! file'+app.clr.reset, file.replace('.less', '.css'), 'error:', err if err
+            app.fs.writeFile file.replace('.less', '.css'), css, (err) -> app.log app.clr.red+'autocompile write error! file'+app.clr.reset, file.replace('.less', '.css'), 'error:', err if err
