@@ -22,7 +22,7 @@ module.exports = (app) ->
             try
                 cs = coffee.compile rawCode
             catch error
-                return console.log app.clr.red+'CoffeeScript error:'+app.clr.reset, file.replace(app.cfg.path, '')+':', error.message, "on lines:", error.location.first_line+'-'+error.location.last_line  
+                return console.log app.clr.red+'CoffeeScript error:'+app.clr.reset, file.replace(app.cfg.path, '')+':', error.message, error.description, error
             unless error?
                 app.fs.writeFile file.replace('.coffee', '.js'), cs, (err) -> console.log app.clr.red+'autocompile write error! file'+app.clr.reset, file.replace('.coffee', '.js'), 'error:', err if err
     
@@ -42,5 +42,6 @@ module.exports = (app) ->
         try require.resolve 'less'
         catch error then return console.log app.clr.cyan+'LESS:'+app.clr.reset, 'not installed - try npm install "less"'
         if !less then less = require('less')
+        console.log app.clr.cyan+'LESS:'+app.clr.reset, file.replace(app.cfg.path, '')
         less.render app.fs.readFileSync(file, 'utf8'), (err, css) ->
             app.fs.writeFile file.replace('.less', '.css'), css, (err) -> console.log app.clr.red+'autocompile write error! file'+app.clr.reset, file.replace('.less', '.css'), 'error:', err if err

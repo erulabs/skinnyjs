@@ -118,7 +118,11 @@ module.exports = class Skinnyjs
     @mongo.MongoClient.connect 'mongodb://'+@cfg.db+'/'+@cfg.project, (err, db) => if err then return @log @clr.red+'MongoDB error:'+@clr.reset, err else @db = db
     # Read each modules directories and for each file in the directory, skinny.initModule(file) with the correct type and file path
     for moduleType in @cfg.moduleTypes
-      @fs.readdirSync(@cfg.layout[moduleType]).forEach (path) => if @fileMatch path then @initModule moduleType, { path: @cfg.layout[moduleType]+@path.sep+path }
+      @fs.readdirSync(@cfg.layout[moduleType]).forEach (path) =>
+        if @fileMatch path
+          file = @cfg.layout[moduleType] + @path.sep + path
+          if @compiler[@path.extname file]? then return @compiler[@path.extname file](file)
+          @initModule moduleType, { path: file }
     # Run skinny init before HTTP listening - this allows the user to override any @server settings they want
     if cb? then cb(@)
     # JSON and Gzip by default
@@ -136,7 +140,7 @@ module.exports = class Skinnyjs
     catch error then return @error error, { type: 'skinnyCore', error: 'socketioListenException' }
     # Our socket.io powered quick-reload -> depends on node-watch for cross-platform functionality
     # fires @fileChangeEvent on file changes in the 'watched' directories
-    if @cfg.reload
+    setTimeout () =>
       @watch = require 'node-watch'
       for watched in [ 'app', 'configs', 'test' ]
         @watch @cfg.layout[watched], (file) => @fileChangeEvent(file)
@@ -153,7 +157,7 @@ module.exports = class Skinnyjs
       else delete @cache[file] if @cache[file]?
       # Load the file! Force a reload of it if it exists already and send a refresh signal to the browser and console
       if @initModule file.split(@path.sep).splice(-2)[0], { path: file, force: yes, clear: !exists }
-        @log '-->', @clr.green+'Reloading browser'+@clr.reset, '-', file.replace(@cfg.path, '')
+        #@log '-->', @clr.green+'Reloading browser'+@clr.reset, 'for', file
         @io.sockets.emit('__skinnyjs', { reload: { delay: 0 } })
   # Create a new SkinnyJS project template - copies skinnyjs templates into skinny.cfg.path/
   install: (target, cb) ->

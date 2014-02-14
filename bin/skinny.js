@@ -17,7 +17,7 @@ if (cmd['new']) {
 	var instance = new SkinnyJs();
 	instance.install(cmd['new']);
 } else if (cmd['server']) {
-	process.stdout.write("\u001b[36m" + "SkinnyJS" + "\u001b[0m" + " version " + skinnypkg.version + ' ');
+	console.log("\u001b[36mSkinnyJS\u001b[0m version", skinnypkg.version);
 	require(fs.realpathSync('./app/server.js'));
 } else if (cmd['generate']) {
 	// This is massivly incorrect, but it does work assuming everything is as default.
