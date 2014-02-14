@@ -147,10 +147,9 @@ module.exports = class Skinnyjs
     catch error then return @error error, { type: 'skinnyCore', error: 'socketioListenException' }
     # Our socket.io powered quick-reload -> depends on node-watch for cross-platform functionality
     # fires @fileChangeEvent on file changes in the 'watched' directories
-    setTimeout () =>
-      @watch = require 'node-watch'
-      for watched in [ 'app', 'configs', 'test' ]
-        @watch @cfg.layout[watched], (file) => @fileChangeEvent(file)
+    @watch = require 'node-watch'
+    for watched in [ 'app', 'configs', 'test' ]
+      @watch @cfg.layout[watched], (file) => @fileChangeEvent(file)
   # Matches file paths that skinny uses
   fileMatch: (file) -> if file.match /\/\.git|\.swp$|\.tmp$/ then return false else return true
   # Reload the page and compile code if required - skinny watches files and does stuff!
@@ -198,10 +197,17 @@ module.exports = class Skinnyjs
             return false if res.headersSent
             # If the controller returned some data, sent it down the wire:
             controllerOutput = JSON.stringify controllerOutput if typeof controllerOutput == "object"
-            return res.send controllerOutput if controllerOutput?
+            if controllerOutput?
+              res.writeHead 200
+              return res.send controllerOutput
         # If the catchall sent headers, then do not 404 (or try to render view)
         return false if res.headersSent
         # We'll cache file paths that exist to avoid running fs calls per request if possible.
         if !@cache[res.view]? then @cache[res.view] = @fs.existsSync res.view
         # If the controller didn't return anything, render the view (assuming it exists)
-        if @cache[res.view] then return res.sendfile res.view else res.send '404'
+        if @cache[res.view]
+          res.writeHead 200
+          return res.sendfile res.view
+        else
+          res.writeHead 404
+          res.send '404'
