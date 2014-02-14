@@ -22,6 +22,11 @@ module.exports = (app) ->
 		# that you want to use a view (it'll look in app/views/CONTROLLERNAME/ACTIONNAME.html)
 		# if we've dropped all the way down here and that file doesn't exist, then we'll finally 404
 
+		# Should you want complete control, and you want to make the browser wait for your response (not normally a good idea)
+		# you can return { skip: true } and skinny will ignore the request the same as if you had sent headers.
+		# Typically it's a better idea to "res.writeHead(200);" which will also tell skinny to ignore the request.
+		# Be aware you're causing timeouts if you never respond to the request!
+
 		# An example of using models:
 		# models get their names from their file (so models/thing.js is app.models.thing)
 		# they are automatically mongoDB collections, and that collection is model.db
