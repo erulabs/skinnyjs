@@ -169,7 +169,7 @@ module.exports = class Skinnyjs
   parseRoutes: () ->
     @_.each @routes, (obj, route) =>
       # For each route, add to @server (default method is 'get')
-      @server[obj.method or 'get'] route, (req, res) =>
+      @server[obj.method?.toLowerCase() or 'get'] route, (req, res) =>
         # Run catchall route if we've found a controller
         @controllers[obj.controller]['*'](req, res) if @controllers[obj.controller]['*']? if @controllers[obj.controller]?
         # Log concise request to console
