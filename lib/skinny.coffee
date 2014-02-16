@@ -139,7 +139,8 @@ module.exports = class Skinnyjs
     @server.use '/views', @express.static @cfg.layout.views
     @server.use '/assets', @express.static @cfg.layout.assets
     # Node HTTP init and listen()
-    @httpd = require('http').createServer @server
+    @http = require('http')
+    @httpd = @http.createServer @server
     try @httpd.listen @cfg.port, () => @log '-->', @clr.green+'Listening on port:'+@clr.reset, @cfg.port
     catch error then return @error error, { type: 'skinnyCore', error: 'httpListenException' }
     # Socketio init and listen()
