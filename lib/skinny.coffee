@@ -177,35 +177,42 @@ module.exports = class Skinnyjs
       @log err if err
       if cb? then cb()
   # Parses app.routes and adds them to express
-  parseRoutes: () ->
-    @_.each @routes, (obj, route) =>
-      # For each route, add to @server (default method is 'get')
-      @server[obj.method?.toLowerCase() or 'get'] route, (req, res) =>
-        # Run catchall route if we've found a controller
-        @controllers[obj.controller]['*'](req, res) if @controllers[obj.controller]['*']? if @controllers[obj.controller]?
-        # Log concise request to console
-        @log '('+req.connection.remoteAddress+')', @clr.cyan+req.method+':'+@clr.reset, req.url, @clr.gray+'->'+@clr.reset, obj.controller+@clr.gray+'#'+@clr.reset+obj.action
-        # build out filepath for expected view (may or may not exist)
-        res.view = @cfg.layout.views+'/'+obj.controller+'/'+obj.action+'.html'
-        # Run controller if it exists
-        if @controllers[obj.controller]? and @controllers[obj.controller][obj.action]?
-          try controllerOutput = @controllers[obj.controller][obj.action](req, res)
-          catch error then @error error, { error: 'controllerException', details: { name: obj.controller, action: obj.controller } }
+  parseRoutes: (routes, multirouteName) ->
+    if !routes? then routes = @routes
+    @_.each routes, (obj, route) =>
+      if obj.push?
+        @parseRoutes(obj, route)
+      else if typeof obj is 'object'
+        if multirouteName? then route = multirouteName
+        @setRoute(obj, route)
+  setRoute: (obj, route) ->
+    # For each route, add to @server (default method is 'get')
+    @server[obj.method?.toLowerCase() or 'get'] route, (req, res) =>
+      # Run catchall route if we've found a controller
+      @controllers[obj.controller]['*'](req, res) if @controllers[obj.controller]['*']? if @controllers[obj.controller]?
+      # Log concise request to console
+      @log '('+req.connection.remoteAddress+')', @clr.cyan+req.method+':'+@clr.reset, req.url, @clr.gray+'->'+@clr.reset, obj.controller+@clr.gray+'#'+@clr.reset+obj.action
+      # build out filepath for expected view (may or may not exist)
+      res.view = @cfg.layout.views+'/'+obj.controller+'/'+obj.action+'.html'
+      # Run controller if it exists
+      if @controllers[obj.controller]? and @controllers[obj.controller][obj.action]?
+        try controllerOutput = @controllers[obj.controller][obj.action](req, res)
+        catch error then @error error, { error: 'controllerException', details: { name: obj.controller, action: obj.controller } }
+        if controllerOutput?
+          # Allow a manual bypass
+          if controllerOutput.skip? then return false
+          # If the controller sent headers, stop all activity - the controller is handeling this request
+          return false if res.headersSent
+          # If the controller returned some data, sent it down the wire:
+          controllerOutput = JSON.stringify controllerOutput if typeof controllerOutput == "object"
           if controllerOutput?
-            # Allow a manual bypass
-            if controllerOutput.skip? then return false
-            # If the controller sent headers, stop all activity - the controller is handeling this request
-            return false if res.headersSent
-            # If the controller returned some data, sent it down the wire:
-            controllerOutput = JSON.stringify controllerOutput if typeof controllerOutput == "object"
-            if controllerOutput?
-              return res.send controllerOutput
-        # If the catchall sent headers, then do not 404 (or try to render view)
-        return false if res.headersSent
-        # We'll cache file paths that exist to avoid running fs calls per request if possible.
-        if !@cache[res.view]? then @cache[res.view] = @fs.existsSync res.view
-        # If the controller didn't return anything, render the view (assuming it exists)
-        if @cache[res.view]
-          return res.sendfile res.view
-        else
-          res.send '404'
+            return res.send controllerOutput
+      # If the catchall sent headers, then do not 404 (or try to render view)
+      return false if res.headersSent
+      # We'll cache file paths that exist to avoid running fs calls per request if possible.
+      if !@cache[res.view]? then @cache[res.view] = @fs.existsSync res.view
+      # If the controller didn't return anything, render the view (assuming it exists)
+      if @cache[res.view]
+        return res.sendfile res.view
+      else
+        res.send '404'
