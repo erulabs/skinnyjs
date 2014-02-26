@@ -52,7 +52,7 @@ module.exports = class Skinnyjs
           if typeof v isnt "function"
             unless k in [ 'prototype', '__super__' ]
               out[k] = v
-        try skinny.db.collection(name).save out, () -> if cb? then cb()
+        try skinny.db.collection(name).save out, (error, inserted) -> if cb? then cb(error, inserted)
         catch error then return skinny.error error, { type: 'database', error: 'modelSaveException', details: error.message }
       remove: (cb) ->
         if !@_id? then if cb? then cb(); return true
