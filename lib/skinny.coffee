@@ -17,6 +17,8 @@ module.exports = class Skinnyjs
     @cfg.path = @path.normalize process.cwd() unless @cfg.path?
     # Project name is the name of this directory by default
     @cfg.project = @cfg.path.split(@path.sep).splice(-1)[0].replace('.', '') unless @cfg.project?
+    # Compile all files before starting skinny
+    @cfg.precompile = yes
     # Directory structure - existing values are required.
     if !@cfg.layout? then @cfg.layout = 
       app: '/app'
@@ -109,6 +111,22 @@ module.exports = class Skinnyjs
     @log @clr.red+'Exception: '+opts.error+@clr.reset, 'in', (if opts.details? and opts.details.name? then '"'+opts.details.name+'":' else opts), error.toString()
     if error.stack? then @log "\n"+@clr.cyan+"stack:"+@clr.reset, error.stack
     if opts.details? then @log @clr.cyan+"the Skinny:"+@clr.reset, opts.details
+  # Compile all files in the project without including them
+  precompile: (callback) ->
+    if !@cfg.precompile then return callback()
+    # Track calls to the compiler
+    activeCompileCalls = 0
+    # Read each modules directories and for each file in the directory, skinny.initModule(file) with the correct type and file path
+    for moduleType in @cfg.moduleTypes
+      @fs.readdirSync(@cfg.layout[moduleType]).forEach (path) =>
+        if @fileMatch path
+          file = @cfg.layout[moduleType] + @path.sep + path
+          if @compiler[@path.extname file]?
+            activeCompileCalls++
+            @compiler[@path.extname file] file, () ->
+              activeCompileCalls--
+              if activeCompileCalls == 0
+                callback()
   # Skinny project init / server - takes no arguments
   init: (cb) ->
     # Express JS defaults and listen()
@@ -116,43 +134,42 @@ module.exports = class Skinnyjs
     # MongoDB init and connect() -> defines @db
     @mongo = require 'mongodb'
     @mongo.MongoClient.connect 'mongodb://'+@cfg.db+'/'+@cfg.project, (err, db) => if err then return @log @clr.red+'MongoDB error:'+@clr.reset, err else @db = db
-    # Read each modules directories and for each file in the directory, skinny.initModule(file) with the correct type and file path
-    for moduleType in @cfg.moduleTypes
-      @fs.readdirSync(@cfg.layout[moduleType]).forEach (path) =>
-        if @fileMatch path
-          file = @cfg.layout[moduleType] + @path.sep + path
-          # This is a race condition - ie: if no compilers have been loaded (initModule compiler.js)
-          # Then we won't have any compilers loaded! Hence, the template compiler is called
-          # 000_compiler.coffee, because fs.readdir returns files sorted by name.
-          # Of course, this implies 000_compiler.js is read and therefore 000_compiler.coffee is _not_
-          # compiled on boot. That's not horrible though, since the compiler is probably rarely modified.
-          if @compiler[@path.extname file]? then return @compiler[@path.extname file](file)
-          @initModule moduleType, { path: file }
-    # Run skinny init before HTTP listening - this allows the user to override any @server settings they want
-    if cb? then cb(@)
-    # JSON and Gzip by default
-    @server.use @express.json()
-    @server.use @express.compress()
-    # Allow parsing of POST and GET arguments by default.
-    @server.use @express.urlencoded()
-    # Static asset routes -> this should be improved.
-    @server.use '/views', @express.static @cfg.layout.views
-    @server.use '/assets', @express.static @cfg.layout.assets
-    # Node HTTP init and listen()
-    @http = require('http')
-    @httpd = @http.createServer @server
-    try @httpd.listen @cfg.port, () => @log '-->', @clr.green+'Listening on port:'+@clr.reset, @cfg.port
-    catch error then return @error error, { type: 'skinnyCore', error: 'httpListenException' }
-    # Socketio init and listen()
-    try @io = require('socket.io').listen @httpd, { log: no }
-    catch error then return @error error, { type: 'skinnyCore', error: 'socketioListenException' }
-    # Our socket.io powered quick-reload -> depends on node-watch for cross-platform functionality
-    # fires @fileChangeEvent on file changes in the 'watched' directories
-    @watch = require 'node-watch'
-    for watched in [ 'app', 'configs', 'test' ]
-      @watch @cfg.layout[watched], (file) => @fileChangeEvent(file)
+    # Explicity look for the compiler script.
+    compilerPath = @cfg.layout.configs + @path.sep + 'compiler.js'
+    if @fs.existsSync compilerPath then @initModule 'configs', { path: compilerPath }
+    @precompile () =>
+      for moduleType in @cfg.moduleTypes
+        @fs.readdirSync(@cfg.layout[moduleType]).forEach (path) =>
+          if @fileMatch path and path.substr(-3) is '.js'
+            file = @cfg.layout[moduleType] + @path.sep + path
+            @initModule moduleType, { path: file }
+      # Run skinny init before HTTP listening - this allows the user to override any @server settings they want
+      if cb? then cb(@)
+      # JSON and Gzip by default
+      @server.use @express.json()
+      @server.use @express.compress()
+      # Allow parsing of POST and GET arguments by default.
+      @server.use @express.urlencoded()
+      # Static asset routes -> this should be improved.
+      @server.use '/views', @express.static @cfg.layout.views
+      @server.use '/assets', @express.static @cfg.layout.assets
+      # Node HTTP init and listen()
+      @http = require('http')
+      @httpd = @http.createServer @server
+      try @httpd.listen @cfg.port, () => @log '-->', @clr.green+'Listening on port:'+@clr.reset, @cfg.port
+      catch error then return @error error, { type: 'skinnyCore', error: 'httpListenException' }
+      # Socketio init and listen()
+      try @io = require('socket.io').listen @httpd, { log: no }
+      catch error then return @error error, { type: 'skinnyCore', error: 'socketioListenException' }
+      # Our socket.io powered quick-reload -> depends on node-watch for cross-platform functionality
+      # fires @fileChangeEvent on file changes in the 'watched' directories
+      @watch = require 'node-watch'
+      for watched in [ 'app', 'configs', 'test' ]
+        @watch @cfg.layout[watched], (file) => @fileChangeEvent(file)
   # Matches file paths that skinny uses
-  fileMatch: (file) -> if file.match /\/\.git|\.swp$|\.tmp$/ then return false else return true
+  fileMatch: (file) ->
+    if !false then return true
+    if file.match /\/\.git|\.swp$|\.tmp$/ then return false else return true
   # Reload the page and compile code if required - skinny watches files and does stuff!
   fileChangeEvent: (file) ->
     if @fileMatch file
