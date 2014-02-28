@@ -17,6 +17,8 @@ module.exports = class Skinnyjs
     @cfg.path = @path.normalize process.cwd() unless @cfg.path?
     # Project name is the name of this directory by default
     @cfg.project = @cfg.path.split(@path.sep).splice(-1)[0].replace('.', '') unless @cfg.project?
+    # Compile all files before starting skinny
+    @cfg.precompile = yes
     # Directory structure - existing values are required.
     if !@cfg.layout? then @cfg.layout = 
       app: '/app'
@@ -52,7 +54,7 @@ module.exports = class Skinnyjs
           if typeof v isnt "function"
             unless k in [ 'prototype', '__super__' ]
               out[k] = v
-        try skinny.db.collection(name).save out, () -> if cb? then cb()
+        try skinny.db.collection(name).save out, (error, inserted) -> if cb? then cb(error, inserted)
         catch error then return skinny.error error, { type: 'database', error: 'modelSaveException', details: error.message }
       remove: (cb) ->
         if !@_id? then if cb? then cb(); return true
@@ -109,6 +111,22 @@ module.exports = class Skinnyjs
     @log @clr.red+'Exception: '+opts.error+@clr.reset, 'in', (if opts.details? and opts.details.name? then '"'+opts.details.name+'":' else opts), error.toString()
     if error.stack? then @log "\n"+@clr.cyan+"stack:"+@clr.reset, error.stack
     if opts.details? then @log @clr.cyan+"the Skinny:"+@clr.reset, opts.details
+  # Compile all files in the project without including them
+  precompile: (callback) ->
+    if !@cfg.precompile then return callback()
+    # Track calls to the compiler
+    activeCompileCalls = 0
+    # Read each modules directories and for each file in the directory, skinny.initModule(file) with the correct type and file path
+    for moduleType in @cfg.moduleTypes
+      @fs.readdirSync(@cfg.layout[moduleType]).forEach (path) =>
+        if @fileMatch path
+          file = @cfg.layout[moduleType] + @path.sep + path
+          if @compiler[@path.extname file]?
+            activeCompileCalls++
+            @compiler[@path.extname file] file, () ->
+              activeCompileCalls--
+              if activeCompileCalls == 0
+                callback()
   # Skinny project init / server - takes no arguments
   init: (cb) ->
     # Express JS defaults and listen()
@@ -116,42 +134,42 @@ module.exports = class Skinnyjs
     # MongoDB init and connect() -> defines @db
     @mongo = require 'mongodb'
     @mongo.MongoClient.connect 'mongodb://'+@cfg.db+'/'+@cfg.project, (err, db) => if err then return @log @clr.red+'MongoDB error:'+@clr.reset, err else @db = db
-    # Read each modules directories and for each file in the directory, skinny.initModule(file) with the correct type and file path
-    for moduleType in @cfg.moduleTypes
-      @fs.readdirSync(@cfg.layout[moduleType]).forEach (path) =>
-        if @fileMatch path
-          file = @cfg.layout[moduleType] + @path.sep + path
-          # This is a race condition - ie: if no compilers have been loaded (initModule compiler.js)
-          # Then we won't have any compilers loaded! Hence, the template compiler is called
-          # 000_compiler.coffee, because fs.readdir returns files sorted by name.
-          # Of course, this implies 000_compiler.js is read and therefore 000_compiler.coffee is _not_
-          # compiled on boot. That's not horrible though, since the compiler is probably rarely modified.
-          if @compiler[@path.extname file]? then return @compiler[@path.extname file](file)
-          @initModule moduleType, { path: file }
-    # Run skinny init before HTTP listening - this allows the user to override any @server settings they want
-    if cb? then cb(@)
-    # JSON and Gzip by default
-    @server.use @express.json()
-    @server.use @express.compress()
-    # Allow parsing of POST and GET arguments by default.
-    @server.use @express.urlencoded()
-    # Static asset routes -> this should be improved.
-    @server.use '/views', @express.static @cfg.layout.views
-    @server.use '/assets', @express.static @cfg.layout.assets
-    # Node HTTP init and listen()
-    @httpd = require('http').createServer @server
-    try @httpd.listen @cfg.port, () => @log '-->', @clr.green+'Listening on port:'+@clr.reset, @cfg.port
-    catch error then return @error error, { type: 'skinnyCore', error: 'httpListenException' }
-    # Socketio init and listen()
-    try @io = require('socket.io').listen @httpd, { log: no }
-    catch error then return @error error, { type: 'skinnyCore', error: 'socketioListenException' }
-    # Our socket.io powered quick-reload -> depends on node-watch for cross-platform functionality
-    # fires @fileChangeEvent on file changes in the 'watched' directories
-    @watch = require 'node-watch'
-    for watched in [ 'app', 'configs', 'test' ]
-      @watch @cfg.layout[watched], (file) => @fileChangeEvent(file)
+    # Explicity look for the compiler script.
+    compilerPath = @cfg.layout.configs + @path.sep + 'compiler.js'
+    if @fs.existsSync compilerPath then @initModule 'configs', { path: compilerPath }
+    @precompile () =>
+      for moduleType in @cfg.moduleTypes
+        @fs.readdirSync(@cfg.layout[moduleType]).forEach (path) =>
+          if @fileMatch path and path.substr(-3) is '.js'
+            file = @cfg.layout[moduleType] + @path.sep + path
+            @initModule moduleType, { path: file }
+      # Run skinny init before HTTP listening - this allows the user to override any @server settings they want
+      if cb? then cb(@)
+      # JSON and Gzip by default
+      @server.use @express.json()
+      @server.use @express.compress()
+      # Allow parsing of POST and GET arguments by default.
+      @server.use @express.urlencoded()
+      # Static asset routes -> this should be improved.
+      @server.use '/views', @express.static @cfg.layout.views
+      @server.use '/assets', @express.static @cfg.layout.assets
+      # Node HTTP init and listen()
+      @http = require('http')
+      @httpd = @http.createServer @server
+      try @httpd.listen @cfg.port, () => @log '-->', @clr.green+'Listening on port:'+@clr.reset, @cfg.port
+      catch error then return @error error, { type: 'skinnyCore', error: 'httpListenException' }
+      # Socketio init and listen()
+      try @io = require('socket.io').listen @httpd, { log: no }
+      catch error then return @error error, { type: 'skinnyCore', error: 'socketioListenException' }
+      # Our socket.io powered quick-reload -> depends on node-watch for cross-platform functionality
+      # fires @fileChangeEvent on file changes in the 'watched' directories
+      @watch = require 'node-watch'
+      for watched in [ 'app', 'configs', 'test' ]
+        @watch @cfg.layout[watched], (file) => @fileChangeEvent(file)
   # Matches file paths that skinny uses
-  fileMatch: (file) -> if file.match /\/\.git|\.swp$|\.tmp$/ then return false else return true
+  fileMatch: (file) ->
+    if !false then return true
+    if file.match /\/\.git|\.swp$|\.tmp$/ then return false else return true
   # Reload the page and compile code if required - skinny watches files and does stuff!
   fileChangeEvent: (file) ->
     if @fileMatch file
@@ -176,35 +194,51 @@ module.exports = class Skinnyjs
       @log err if err
       if cb? then cb()
   # Parses app.routes and adds them to express
-  parseRoutes: () ->
-    @_.each @routes, (obj, route) =>
-      # For each route, add to @server (default method is 'get')
-      @server[obj.method?.toLowerCase() or 'get'] route, (req, res) =>
-        # Run catchall route if we've found a controller
-        @controllers[obj.controller]['*'](req, res) if @controllers[obj.controller]['*']? if @controllers[obj.controller]?
-        # Log concise request to console
-        @log '('+req.connection.remoteAddress+')', @clr.cyan+req.method+':'+@clr.reset, req.url, @clr.gray+'->'+@clr.reset, obj.controller+@clr.gray+'#'+@clr.reset+obj.action
-        # build out filepath for expected view (may or may not exist)
-        res.view = @cfg.layout.views+'/'+obj.controller+'/'+obj.action+'.html'
-        # Run controller if it exists
-        if @controllers[obj.controller]? and @controllers[obj.controller][obj.action]?
-          try controllerOutput = @controllers[obj.controller][obj.action](req, res)
-          catch error then @error error, { error: 'controllerException', details: { name: obj.controller, action: obj.controller } }
+  parseRoutes: (routes, multirouteName) ->
+    if !routes? then routes = @routes
+    @_.each routes, (obj, route) =>
+      if obj.push?
+        @parseRoutes(obj, route)
+      else if typeof obj is 'object'
+        if multirouteName? then route = multirouteName
+        @setRoute(obj, route)
+  setRoute: (obj, route) ->
+    # For each route, add to @server (default method is 'get')
+    @server[obj.method?.toLowerCase() or 'get'] route, (req, res) =>
+      # Run catchall route if we've found a controller
+      @controllers[obj.controller]['*'](req, res) if @controllers[obj.controller]['*']? if @controllers[obj.controller]?
+      # Log concise request to console
+      @log '('+req.connection.remoteAddress+')', @clr.cyan+req.method+':'+@clr.reset, req.url, @clr.gray+'->'+@clr.reset, obj.controller+@clr.gray+'#'+@clr.reset+obj.action
+      # build out filepath for expected view (may or may not exist)
+      res.view = @cfg.layout.views+'/'+obj.controller+'/'+obj.action+'.html'
+      # We'll cache file paths that exist to avoid running fs calls per request if possible.
+      if !@cache[res.view]? then @cache[res.view] = @fs.existsSync res.view
+      # Run controller if it exists
+      if @controllers[obj.controller]? and @controllers[obj.controller][obj.action]?
+        try controllerOutput = @controllers[obj.controller][obj.action](req, res)
+        catch error then @error error, { error: 'controllerException', details: { name: obj.controller, action: obj.controller } }
+        if controllerOutput?
+          # Allow a manual bypass
+          if controllerOutput.skip? then return false
+          # If the controller sent headers, stop all activity - the controller is handeling this request
+          return false if res.headersSent
+          # If the controller returned some data, sent it down the wire:
+          controllerOutput = JSON.stringify controllerOutput if typeof controllerOutput == "object"
           if controllerOutput?
-            # Allow a manual bypass
-            if controllerOutput.skip? then return false
-            # If the controller sent headers, stop all activity - the controller is handeling this request
-            return false if res.headersSent
-            # If the controller returned some data, sent it down the wire:
-            controllerOutput = JSON.stringify controllerOutput if typeof controllerOutput == "object"
-            if controllerOutput?
-              return res.send controllerOutput
-        # If the catchall sent headers, then do not 404 (or try to render view)
-        return false if res.headersSent
-        # We'll cache file paths that exist to avoid running fs calls per request if possible.
-        if !@cache[res.view]? then @cache[res.view] = @fs.existsSync res.view
-        # If the controller didn't return anything, render the view (assuming it exists)
-        if @cache[res.view]
-          return res.sendfile res.view
+            try res.send controllerOutput
+            catch error then @error error, { error: 'controllerException', details: { name: obj.controller, action: obj.controller } }
+            finally return false
         else
-          res.send '404'
+          # Assuming the controller returned undefined and the view _doesn't exist_
+          # then we'll assume the controller wants to handle req/res on its own
+          if !@cache[res.view] then return false
+      # If the catchall sent headers, then do not 404 (or try to render view)
+      return false if res.headersSent
+      # If the controller didn't return anything, render the view (assuming it exists)
+      if @cache[res.view]
+        console.log 'headers', res.headerSent, 'controller:', controllerOutput
+        try res.sendfile res.view
+        catch error then @error error, { error: 'controllerException', details: { name: obj.controller, action: obj.controller } }
+        finally return false
+      else
+        res.send '404'
