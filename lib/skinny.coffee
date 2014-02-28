@@ -211,6 +211,8 @@ module.exports = class Skinnyjs
       @log '('+req.connection.remoteAddress+')', @clr.cyan+req.method+':'+@clr.reset, req.url, @clr.gray+'->'+@clr.reset, obj.controller+@clr.gray+'#'+@clr.reset+obj.action
       # build out filepath for expected view (may or may not exist)
       res.view = @cfg.layout.views+'/'+obj.controller+'/'+obj.action+'.html'
+      # We'll cache file paths that exist to avoid running fs calls per request if possible.
+      if !@cache[res.view]? then @cache[res.view] = @fs.existsSync res.view
       # Run controller if it exists
       if @controllers[obj.controller]? and @controllers[obj.controller][obj.action]?
         try controllerOutput = @controllers[obj.controller][obj.action](req, res)
@@ -223,13 +225,20 @@ module.exports = class Skinnyjs
           # If the controller returned some data, sent it down the wire:
           controllerOutput = JSON.stringify controllerOutput if typeof controllerOutput == "object"
           if controllerOutput?
-            return res.send controllerOutput
+            try res.send controllerOutput
+            catch error then @error error, { error: 'controllerException', details: { name: obj.controller, action: obj.controller } }
+            finally return false
+        else
+          # Assuming the controller returned undefined and the view _doesn't exist_
+          # then we'll assume the controller wants to handle req/res on its own
+          if !@cache[res.view] then return false
       # If the catchall sent headers, then do not 404 (or try to render view)
       return false if res.headersSent
-      # We'll cache file paths that exist to avoid running fs calls per request if possible.
-      if !@cache[res.view]? then @cache[res.view] = @fs.existsSync res.view
       # If the controller didn't return anything, render the view (assuming it exists)
       if @cache[res.view]
-        return res.sendfile res.view
+        console.log 'headers', res.headerSent, 'controller:', controllerOutput
+        try res.sendfile res.view
+        catch error then @error error, { error: 'controllerException', details: { name: obj.controller, action: obj.controller } }
+        finally return false
       else
         res.send '404'
