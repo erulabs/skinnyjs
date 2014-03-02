@@ -114,7 +114,7 @@ directly on the object if you want, but the skinny.routes object is just a nice 
 
     skinny.server.get '/someRoute', (req, res) ->
 
-and using Express (ie: side stepping skinny). Read parseRoutes() here: https://github.com/erulabs/skinnyjs/blob/master/lib/skinny.coffee#L148
+and using Express (ie: side stepping skinny). Read parseRoutes() here: https://github.com/erulabs/skinnyjs/blob/master/lib/skinny.coffee#L196
 
 ####configs/compiler.js
 Skinny defaults with a coffee-script and node-sass plugin. You can add more and they too will be automatically reloaded into the app. They are run whenever a file in /app or /configs is changed which has a file extention that matches a compiler. ie:
@@ -123,7 +123,7 @@ Skinny defaults with a coffee-script and node-sass plugin. You can add more and 
 
 ## models
 
-  Model files are special - they're wrapped up tight with MongoDB. The collection they create is equal to the filename - ie: app/models/thing.js is skinny.db.collection('thing'). If you don't want Skinny to wrap the db results, just call the db directly! Essentially, the code says it all: https://github.com/erulabs/skinnyjs/blob/master/lib/skinny.coffee#L37
+  Model files are special - they're wrapped up tight with MongoDB. The collection they create is equal to the filename - ie: app/models/thing.js is skinny.db.collection('thing'). If you don't want Skinny to wrap the db results, just call the db directly! Essentially, the code says it all: https://github.com/erulabs/skinnyjs/blob/master/lib/skinny.coffee#L39
   
   That's it! That's all it is! The function your file returns (module.exports = () ->) is now at `skinny.models[ModelName]`, is a MongoDB collection, and gets functions like:
   

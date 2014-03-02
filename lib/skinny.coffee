@@ -236,7 +236,6 @@ module.exports = class Skinnyjs
       return false if res.headersSent
       # If the controller didn't return anything, render the view (assuming it exists)
       if @cache[res.view]
-        console.log 'headers', res.headerSent, 'controller:', controllerOutput
         try res.sendfile res.view
         catch error then @error error, { error: 'controllerException', details: { name: obj.controller, action: obj.controller } }
         finally return false
