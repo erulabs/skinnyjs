@@ -81,12 +81,14 @@ module.exports = class Skinnyjs
     # Returning true passes task to reloader - returning false refuses reload
     # if this isn't javascript or if its a client-side file, we're not interested, so move on.
     if !opts.path? then return false else @path.normalize opts.path
-    isntJavascript = !!!opts.path.match /\.js$/
-    isClient = !!opts.path.match /\/client\//
-    if isntJavascript or isClient then return true
-    if !!opts.path.match /\/test\/*.js$/ then return false
+    # obviously, we can only load javascript.
+    return true if !!!opts.path.match /\.js$/
+    # An OS agnostic check for /client/ - as far as I know the best way of doing this that works on all platforms
+    return true if !!(@path.normalize(opts.path).toString().indexOf(@path.sep + 'client' + @path.sep) > -1)
+    # Ignore any test files which may have been included
+    return false if !!opts.path.match /\/test\/*.js$/
     # If this is not a known module type then do not reload page - instead log a message - TODO: auto-restart skinny
-    if type not in @cfg.moduleTypes then @log @clr.cyan+'Unhandled change on:'+@clr.reset, opts.path, @clr.cyan+"you may want to restart Skinny"+@clr.reset ; return false
+    if type not in @cfg.moduleTypes then @log @clr.cyan+'Unhandled change on:'+@clr.reset, type+':', opts.path, @clr.cyan+"you may want to restart Skinny"+@clr.reset ; return false
     # Add the module to skinny - module name is opts.name or the name of the .js file that is loaded
     opts.name = if opts.name? then opts.name else opts.path.split(@path.sep).splice(-1)[0].replace '.js', ''
     # optionally clear the cache and module list
