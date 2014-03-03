@@ -67,7 +67,9 @@ module.exports = class Skinnyjs
         for instance in results
           instance = bind(instance)
         cb results
-    if !model.new? then model.new = () -> return bind({})
+    if !model.new? then model.new = (initial) ->
+      initial = {} if !initial?
+      return bind(initial)
     if !model.remove? then model.remove = (query, cb) ->
       if typeof query == 'function' then cb = query ; query = {}
       if cb == undefined then cb = () -> return true
