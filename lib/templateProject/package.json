@@ -4,7 +4,8 @@
 	"email": "",
 	"version": "0.0.1",
 	"dependencies": {
-		"skinnyjs": "latest"
+		"skinnyjs": "latest",
+		"coffee-script": "latest"
 	},
 	"scripts": {
 		"test": "make test-all"
