@@ -18,7 +18,7 @@ module.exports = class Skinnyjs
     # Set the project path to our current working directory by default
     @cfg.path = @path.normalize process.cwd() unless @cfg.path?
     # Project name is the name of this directory by default
-    @cfg.project = @cfg.path.split(@path.sep).splice(-1)[0].replace('.', '') unless @cfg.project?
+    @cfg.project = @cfg.path.split(@path.sep).splice(-1)[0].replace(/\./g, '') unless @cfg.project?
     # Compile all files before starting skinny
     @cfg.precompile = yes
     # Directory structure - existing values are required.
