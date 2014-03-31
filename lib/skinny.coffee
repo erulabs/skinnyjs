@@ -11,6 +11,8 @@ module.exports = class Skinnyjs
     @cfg.port = 9000 unless @cfg.port?
     # Autoreload - boolean
     @cfg.reload = true unless @cfg.reload?
+    # Use HTTP by default, 'https' for HTTPS
+    @cfg.http = 'http' unless @cfg.http?
     # MongoDB server IP:PORT
     @cfg.db = '127.0.0.1:27017' unless @cfg.db?
     # Set the project path to our current working directory by default
@@ -67,6 +69,7 @@ module.exports = class Skinnyjs
         for instance in results
           instance = bind(instance)
         cb results if cb? and typeof cb is 'function'
+    if !model.update? then model.update = @db.collection(name).update
     if !model.new? then model.new = (initial) ->
       initial = {} if !initial?
       return bind(initial)
@@ -137,39 +140,40 @@ module.exports = class Skinnyjs
     @express = require 'express' ; @server = @express()
     # MongoDB init and connect() -> defines @db
     @mongo = require 'mongodb'
-    @mongo.MongoClient.connect 'mongodb://'+@cfg.db+'/'+@cfg.project, (err, db) => if err then return @log @clr.red+'MongoDB error:'+@clr.reset, err else @db = db
-    # Explicity look for the compiler script.
-    compilerPath = @cfg.layout.configs + @path.sep + 'compiler.js'
-    if @fs.existsSync compilerPath then @initModule 'configs', { path: compilerPath }
-    @precompile () =>
-      for moduleType in @cfg.moduleTypes
-        @fs.readdirSync(@cfg.layout[moduleType]).forEach (path) =>
-          if @fileMatch path and path.substr(-3) is '.js'
-            file = @cfg.layout[moduleType] + @path.sep + path
-            @initModule moduleType, { path: file }
-      # Run skinny init before HTTP listening - this allows the user to override any @server settings they want
-      if cb? then cb(@)
-      # JSON and Gzip by default
-      @server.use @express.json()
-      @server.use @express.compress()
-      # Allow parsing of POST and GET arguments by default.
-      @server.use @express.urlencoded()
-      # Static asset routes -> this should be improved.
-      @server.use '/views', @express.static @cfg.layout.views
-      @server.use '/assets', @express.static @cfg.layout.assets
-      # Node HTTP init and listen()
-      @http = require('http')
-      @httpd = @http.createServer @server
-      try @httpd.listen @cfg.port, () => @log '-->', @clr.green+'Listening on port:'+@clr.reset, @cfg.port
-      catch error then return @error error, { type: 'skinnyCore', error: 'httpListenException' }
-      # Socketio init and listen()
-      try @io = require('socket.io').listen @httpd, { log: no }
-      catch error then return @error error, { type: 'skinnyCore', error: 'socketioListenException' }
-      # Our socket.io powered quick-reload -> depends on node-watch for cross-platform functionality
-      # fires @fileChangeEvent on file changes in the 'watched' directories
-      @watch = require 'node-watch'
-      for watched in [ 'app', 'configs', 'test' ]
-        @watch @cfg.layout[watched], (file) => @fileChangeEvent(file)
+    @mongo.MongoClient.connect 'mongodb://'+@cfg.db+'/'+@cfg.project, (err, db) =>
+      if err then return @log @clr.red+'MongoDB error:'+@clr.reset, err else @db = db
+      # Explicity look for the compiler script.
+      compilerPath = @cfg.layout.configs + @path.sep + 'compiler.js'
+      if @fs.existsSync compilerPath then @initModule 'configs', { path: compilerPath }
+      @precompile () =>
+        for moduleType in @cfg.moduleTypes
+          @fs.readdirSync(@cfg.layout[moduleType]).forEach (path) =>
+            if @fileMatch path and path.substr(-3) is '.js'
+              file = @cfg.layout[moduleType] + @path.sep + path
+              @initModule moduleType, { path: file }
+        # Run skinny init before HTTP listening - this allows the user to override any @server settings they want
+        if cb? then cb(@)
+        # JSON and Gzip by default
+        @server.use @express.json()
+        @server.use @express.compress()
+        # Allow parsing of POST and GET arguments by default.
+        @server.use @express.urlencoded()
+        # Static asset routes -> this should be improved.
+        @server.use '/views', @express.static @cfg.layout.views
+        @server.use '/assets', @express.static @cfg.layout.assets
+        # Node HTTP init and listen()
+        @http = require(@cfg.http)
+        @httpd = @http.createServer @server
+        try @httpd.listen @cfg.port, () => @log '-->', @clr.green+'Listening on port:'+@clr.reset, @cfg.port
+        catch error then return @error error, { type: 'skinnyCore', error: 'httpListenException' }
+        # Socketio init and listen()
+        try @io = require('socket.io').listen @httpd, { log: no }
+        catch error then return @error error, { type: 'skinnyCore', error: 'socketioListenException' }
+        # Our socket.io powered quick-reload -> depends on node-watch for cross-platform functionality
+        # fires @fileChangeEvent on file changes in the 'watched' directories
+        @watch = require 'node-watch'
+        for watched in [ 'app', 'configs', 'test' ]
+          @watch @cfg.layout[watched], (file) => @fileChangeEvent(file)
   # Matches file paths that skinny uses
   fileMatch: (file) ->
     if !false then return true
