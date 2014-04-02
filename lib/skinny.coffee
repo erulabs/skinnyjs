@@ -11,12 +11,14 @@ module.exports = class Skinnyjs
     @cfg.port = 9000 unless @cfg.port?
     # Autoreload - boolean
     @cfg.reload = true unless @cfg.reload?
+    # Use HTTP by default, 'https' for HTTPS
+    @cfg.http = 'http' unless @cfg.http?
     # MongoDB server IP:PORT
     @cfg.db = '127.0.0.1:27017' unless @cfg.db?
     # Set the project path to our current working directory by default
     @cfg.path = @path.normalize process.cwd() unless @cfg.path?
     # Project name is the name of this directory by default
-    @cfg.project = @cfg.path.split(@path.sep).splice(-1)[0].replace('.', '') unless @cfg.project?
+    @cfg.project = @cfg.path.split(@path.sep).splice(-1)[0].replace(/\./g, '') unless @cfg.project?
     # Compile all files before starting skinny
     @cfg.precompile = yes
     # Directory structure - existing values are required.
@@ -66,7 +68,8 @@ module.exports = class Skinnyjs
       skinny.db.collection(name).find(query).toArray (err, results) =>
         for instance in results
           instance = bind(instance)
-        cb results
+        cb results if cb? and typeof cb is 'function'
+    if !model.update? then model.update = @db.collection(name).update
     if !model.new? then model.new = (initial) ->
       initial = {} if !initial?
       return bind(initial)
@@ -137,39 +140,40 @@ module.exports = class Skinnyjs
     @express = require 'express' ; @server = @express()
     # MongoDB init and connect() -> defines @db
     @mongo = require 'mongodb'
-    @mongo.MongoClient.connect 'mongodb://'+@cfg.db+'/'+@cfg.project, (err, db) => if err then return @log @clr.red+'MongoDB error:'+@clr.reset, err else @db = db
-    # Explicity look for the compiler script.
-    compilerPath = @cfg.layout.configs + @path.sep + 'compiler.js'
-    if @fs.existsSync compilerPath then @initModule 'configs', { path: compilerPath }
-    @precompile () =>
-      for moduleType in @cfg.moduleTypes
-        @fs.readdirSync(@cfg.layout[moduleType]).forEach (path) =>
-          if @fileMatch path and path.substr(-3) is '.js'
-            file = @cfg.layout[moduleType] + @path.sep + path
-            @initModule moduleType, { path: file }
-      # Run skinny init before HTTP listening - this allows the user to override any @server settings they want
-      if cb? then cb(@)
-      # JSON and Gzip by default
-      @server.use @express.json()
-      @server.use @express.compress()
-      # Allow parsing of POST and GET arguments by default.
-      @server.use @express.urlencoded()
-      # Static asset routes -> this should be improved.
-      @server.use '/views', @express.static @cfg.layout.views
-      @server.use '/assets', @express.static @cfg.layout.assets
-      # Node HTTP init and listen()
-      @http = require('http')
-      @httpd = @http.createServer @server
-      try @httpd.listen @cfg.port, () => @log '-->', @clr.green+'Listening on port:'+@clr.reset, @cfg.port
-      catch error then return @error error, { type: 'skinnyCore', error: 'httpListenException' }
-      # Socketio init and listen()
-      try @io = require('socket.io').listen @httpd, { log: no }
-      catch error then return @error error, { type: 'skinnyCore', error: 'socketioListenException' }
-      # Our socket.io powered quick-reload -> depends on node-watch for cross-platform functionality
-      # fires @fileChangeEvent on file changes in the 'watched' directories
-      @watch = require 'node-watch'
-      for watched in [ 'app', 'configs', 'test' ]
-        @watch @cfg.layout[watched], (file) => @fileChangeEvent(file)
+    @mongo.MongoClient.connect 'mongodb://'+@cfg.db+'/'+@cfg.project, (err, db) =>
+      if err then return @log @clr.red+'MongoDB error:'+@clr.reset, err else @db = db
+      # Explicity look for the compiler script.
+      compilerPath = @cfg.layout.configs + @path.sep + 'compiler.js'
+      if @fs.existsSync compilerPath then @initModule 'configs', { path: compilerPath }
+      @precompile () =>
+        for moduleType in @cfg.moduleTypes
+          @fs.readdirSync(@cfg.layout[moduleType]).forEach (path) =>
+            if @fileMatch path and path.substr(-3) is '.js'
+              file = @cfg.layout[moduleType] + @path.sep + path
+              @initModule moduleType, { path: file }
+        # Run skinny init before HTTP listening - this allows the user to override any @server settings they want
+        if cb? then cb(@)
+        # JSON and Gzip by default
+        @server.use @express.json()
+        @server.use @express.compress()
+        # Allow parsing of POST and GET arguments by default.
+        @server.use @express.urlencoded()
+        # Static asset routes -> this should be improved.
+        @server.use '/views', @express.static @cfg.layout.views
+        @server.use '/assets', @express.static @cfg.layout.assets
+        # Node HTTP init and listen()
+        @http = require(@cfg.http)
+        @httpd = @http.createServer @server
+        try @httpd.listen @cfg.port, () => @log '-->', @clr.green+'Listening on port:'+@clr.reset, @cfg.port
+        catch error then return @error error, { type: 'skinnyCore', error: 'httpListenException' }
+        # Socketio init and listen()
+        try @io = require('socket.io').listen @httpd, { log: no }
+        catch error then return @error error, { type: 'skinnyCore', error: 'socketioListenException' }
+        # Our socket.io powered quick-reload -> depends on node-watch for cross-platform functionality
+        # fires @fileChangeEvent on file changes in the 'watched' directories
+        @watch = require 'node-watch'
+        for watched in [ 'app', 'configs', 'test' ]
+          @watch @cfg.layout[watched], (file) => @fileChangeEvent(file)
   # Matches file paths that skinny uses
   fileMatch: (file) ->
     if !false then return true
@@ -219,23 +223,29 @@ module.exports = class Skinnyjs
       if !@cache[res.view]? then @cache[res.view] = @fs.existsSync res.view
       # Run controller if it exists
       if @controllers[obj.controller]? and @controllers[obj.controller][obj.action]?
-        try controllerOutput = @controllers[obj.controller][obj.action](req, res)
-        catch error then @error error, { error: 'controllerException', details: { name: obj.controller, action: obj.controller } }
-        if controllerOutput?
-          # Allow a manual bypass
-          if controllerOutput.skip? then return false
-          # If the controller sent headers, stop all activity - the controller is handeling this request
-          return false if res.headersSent
-          # If the controller returned some data, sent it down the wire:
-          controllerOutput = JSON.stringify controllerOutput if typeof controllerOutput == "object"
+        if typeof @controllers[obj.controller][obj.action] is 'function'
+          try controllerOutput = @controllers[obj.controller][obj.action](req, res)
+          catch error then @error error, { error: 'controllerException', details: { name: obj.controller, action: obj.controller } }
           if controllerOutput?
-            try res.send controllerOutput
-            catch error then @error error, { error: 'controllerException', details: { name: obj.controller, action: obj.controller } }
-            finally return false
-        else
-          # Assuming the controller returned undefined and the view _doesn't exist_
-          # then we'll assume the controller wants to handle req/res on its own
-          if !@cache[res.view] then return false
+            # Allow a manual bypass
+            if controllerOutput.skip? then return false
+            # If the controller sent headers, stop all activity - the controller is handeling this request
+            return false if res.headersSent
+            # If the controller returned some data, sent it down the wire:
+            if typeof controllerOutput is 'object'
+              # we'll also check to make sure the controllerOutput isn't the request object (this code can probably be improved)
+              # this is a common pitfall when working with skinny. We'll assume what happen is that you're using coffeescript and have a 
+              # req.on ''... as the last returnable object in your code, and you forgot to return { skip: yes }, etc. - so we'll skip for you
+              return false if controllerOutput.constructor.name is 'IncomingMessage'
+              controllerOutput = JSON.stringify controllerOutput if typeof controllerOutput == "object"
+            if controllerOutput?
+              try res.send controllerOutput
+              catch error then @error error, { error: 'controllerException', details: { name: obj.controller, action: obj.controller } }
+              finally return false
+          else
+            # Assuming the controller returned undefined and the view _doesn't exist_
+            # then we'll assume the controller wants to handle req/res on its own
+            if !@cache[res.view] then return false
       # If the catchall sent headers, then do not 404 (or try to render view)
       return false if res.headersSent
       # If the controller didn't return anything, render the view (assuming it exists)
@@ -244,4 +254,4 @@ module.exports = class Skinnyjs
         catch error then @error error, { error: 'controllerException', details: { name: obj.controller, action: obj.controller } }
         finally return false
       else
-        res.send '404'
+        res.status(404).send('Not found');
