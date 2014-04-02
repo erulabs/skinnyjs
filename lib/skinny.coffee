@@ -7,7 +7,10 @@ module.exports = class Skinnyjs
     @fs = require 'fs'
     @cfg = {} if !@cfg?
     # Configuration defaults
-    @cfg.env = 'dev' if !@cfg.env?
+    if !@cfg.env?
+      @env = 'dev'
+    else
+      @env = @cfg.env
     @cfg.port = 9000 unless @cfg.port?
     # Autoreload - boolean
     @cfg.reload = true unless @cfg.reload?
@@ -111,10 +114,10 @@ module.exports = class Skinnyjs
     else @[type][opts.name] = module(@, opts)
     return true
   # Default logger
-  log: () -> if @cfg.env is 'dev' then console.log.apply @, arguments
+  log: () -> if @env is 'dev' then console.log.apply @, arguments
   # Log error via socket:
   error: (error, opts) ->
-    if @cfg.env is 'dev' and @io? then @io.sockets.emit '__skinnyjs', { error: { message: error.message, raw: error.toString(), module: opts } }
+    if @env is 'dev' and @io? then @io.sockets.emit '__skinnyjs', { error: { message: error.message, raw: error.toString(), module: opts } }
     @log @clr.red+'Exception: '+opts.error+@clr.reset, 'in', (if opts.details? and opts.details.name? then '"'+opts.details.name+'":' else opts), error.toString()
     if error.stack? then @log "\n"+@clr.cyan+"stack:"+@clr.reset, error.stack
     if opts.details? then @log @clr.cyan+"the Skinny:"+@clr.reset, opts.details
