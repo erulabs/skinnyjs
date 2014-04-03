@@ -1,35 +1,40 @@
 module.exports = (app) ->
 	'*': () ->
 		# Catch all route
-		# this method will be run before any other method on this controller (per request)
+		# this method will be run before any other method on this controller
 	home: (req, res) ->
 		# This is a controller!
-		# Take some action based on a route here
 
 		# You can manually work with express if you'd like (using the req, res objects), for instance:
 		# res.send("Hello world!");
-		# Skinny will see that you've sent headers and leave your code alone
 
-		# But you don't _have_ to work with express directly. For instance, Skinny will pass any output here
-		# down the wire (if headers haven't yet been sent once this function returns). As an example:
+		# But for convience, Skinny will pass any output here down the wire. For instance:
 		# return "Hello World!";
 		# is exactly the same as the example above.
-
+		# In coffee-script, return is automatically appended to the last line of functions
+		# So a valid controller method is:
+	hello: () -> "Hello World!"
 		# But it doesn't stop there! Skinny is smart enough to make sense of this too:
-		# return { some: 'json' }
-
+	api: () -> { some: 'json' }
 		# You can also return nothing (or explicitly "undefined"), in which case Skinny will assume
-		# that you want to use a view (it'll look in app/views/CONTROLLERNAME/ACTIONNAME.html)
-		# if we've dropped all the way down here and that file doesn't exist, then we'll finally 404
+		# that you want to use a view (it'll look in app/views/{{ controller }}/{{ action }}.html)
 
-		# Should you want complete control, and you want to make the browser wait for your response (not normally a good idea)
-		# you can return { skip: true } and skinny will ignore the request the same as if you had sent headers.
-		# Typically it's a better idea to "res.writeHead(200);" which will also tell skinny to ignore the request.
+		# For async calls, you can return the request object and skinny will ignore the request the same as if you had sent headers.
+		
+		# If that wasn't clear - since skinny assumes "return undefined" (the default output of a function)
+		# means "render a view", if you intend to do async or delayed actions, you can return the request object (or send headers)
+		# An example:
+		# 	setTimeout(() ->
+		#		res.send("hello world!");
+		# 	, 2000);
+		# 	return req
+
+		# Typically it's a better idea to just "res.writeHead(200);" which skinny will notice and assume you will complete the response on your own
 		# Be aware you're causing timeouts if you never respond to the request!
 
 		# An example of using models:
-		# models get their names from their file (so models/thing.js is app.models.thing)
-		# they are automatically mongoDB collections, and that collection is model.db
+		# models get their names from their file (so app/models/thing.js is app.models.thing)
+		# they are automatically mongoDB collections, and that collection is app.models.thing.db
 		# (https://github.com/mongodb/node-mongodb-native "collection" object)
 		
 		# SO, onto mongo queries! A simple "raw" insert:
@@ -61,5 +66,8 @@ module.exports = (app) ->
 		#	console.log results
 
 		# explicitly tell skinny to render our view - this is inherently the output of javascript functions which do not "return"
-		# but sometimes (in the case of using coffee-script)
+		# in the case of using coffee-script it can be easy to return something unintentionally since 'return' is prepended to the last
+		# line of any function that doesn't have a return. Because of that, it's nice to just "return undefined" to be clear about whats happening
+		# "return undefined" means "render the view named home#home or app/views/home/home.html"
+	someView: () ->
 		return undefined
