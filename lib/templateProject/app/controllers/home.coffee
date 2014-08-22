@@ -26,11 +26,14 @@ module.exports = (app) ->
 		# An example:
 		# 	setTimeout(() ->
 		#		res.send("hello world!");
-		# 	, 2000);
+		# 	, 2000)
 		# 	return req
+		# or in coffee-script just:
+		#	someAsync() -> ...
+		#	req
 
-		# Typically it's a better idea to just "res.writeHead(200);" which skinny will notice and assume you will complete the response on your own
-		# Be aware you're causing timeouts if you never respond to the request!
+		# Typically it's a better idea to just "res.writeHead 200" which skinny will notice and assume
+		# you will complete the response on your own Be aware you're causing timeouts if you never respond to the request!
 
 		# An example of using models:
 		# models get their names from their file (so app/models/thing.js is app.models.thing)
